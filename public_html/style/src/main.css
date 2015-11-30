@@ -1,0 +1,42 @@
+body {
+  padding-left: 10px;
+  padding-top: 10px;
+  margin: 0px;
+  background-color: #1e1100;
+}
+
+.playerSection {
+  overflow: hidden;
+  margin: 0px;
+  padding: 0px;
+}
+
+.zone {
+  background-image: url("../../resources/feltbackground.png");
+  margin-right: 10px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+.hand {
+  height: 150px;
+  width: calc(79% - 40px);
+  float: left;
+}
+
+p {
+  text-align: center;
+  margin-top: 4px;
+  color: white;
+}
+
+#battlefield {
+  width: calc(100% - 10px);
+  margin-top: 0px;
+}
+
+.singleCardZone {
+  height: 150px;
+  width: 7%;
+  float: right;
+}

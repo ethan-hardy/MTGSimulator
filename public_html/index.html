@@ -2,30 +2,40 @@
 
 <html>
     <head>
-        <link rel="stylesheet" href="main.css">
+        <link rel="stylesheet" href="style/src/main.css">
     </head>
     <body>
-        <div id='oppSide' class="zone">
-            <div id='oppLibrary' class="zone">
-
+        <div class="playerSection">
+            <div id='oppHand' class="zone hand">
             </div>
-            <div id='oppGraveyard' class="zone">
-
+            <div id='oppLibrary' class="zone singleCardZone">
+                <p>Library</p>
             </div>
-            <div id='oppExile' class="zone">
-
+            <div id='oppGraveyard' class="zone singleCardZone">
+                <p>Graveyard</p>
             </div>
-        </div>
-        <div id='yourSide' class="zone">
-            <div id='yourLibrary' class="zone">
-
-            </div>
-            <div id='yourGraveyard' class="zone">
-
-            </div>
-            <div id='yourExile' class="zone">
-
+            <div id='oppExile' class="zone singleCardZone">
+                <p>Exile</p>
             </div>
         </div>
+        <div id='battlefield' class="zone">
+
+        </div>
+        <div class="playerSection">
+            <div id='yourHand' class="zone hand">
+
+            </div>
+            <div id='yourLibrary' class="zone singleCardZone">
+                <p>Library</p>
+            </div>
+            <div id='yourGraveyard' class="zone singleCardZone">
+                <p>Graveyard</p>
+            </div>
+            <div id='yourExile' class="zone singleCardZone">
+                <p>Exile</p>
+            </div>
+        </div>
+        <script src = "jquery.min.js"></script>
+        <script src="script/src/main.js"></script>
     </body>
 </html>
