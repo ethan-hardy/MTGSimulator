@@ -1,34 +1,31 @@
 body {
-  padding-left: 10px;
-  padding-top: 10px;
+  padding-left: 0px;
+  padding-top: 0px;
   margin: 0px;
   background-color: #321600;
 }
 
 .playerSection {
-  margin: 0px;
+  margin-bottom: -4px;
   padding: 0px;
 }
 
 .zone {
   background-image: url("../../resources/feltbackground.png");
-  margin-right: 10px;
-  margin-bottom: 10px;
+  margin-right: 8px;
+  margin-bottom: 8px;
   border-radius: 4px;
   position: relative;
 }
 
 .card {
   background-image: url("../../resources/card.jpeg");
-  height: 125px;
-  width: 91px;
+  height: 115px;
+  width: 84px;
   border-radius: 5px;
   background-size: cover;
   box-sizing: border-box;
   position: absolute;
-  top: calc(50% + 10px);
-  left: 50%;
-  transform: translate(-50%, -50%);
 }
 
 .card:hover {
@@ -37,8 +34,8 @@ body {
 }
 
 .hand {
-  height: 150px;
-  width: calc(79% - 40px);
+  height: 140px;
+  width: calc(79% - 32px);
   display: inline-block;
 }
 
@@ -48,16 +45,16 @@ p {
   width: 300%;
   text-align: center;
   margin-top: 2px;
+  font-size: 14px;
   color: white;
 }
 
 #battlefield {
-  width: calc(100% - 10px);
-  margin-top: 0px;
+  width: calc(100% - 8px);
 }
 
 .singleCardZone {
-  height: 150px;
+  height: 140px;
   width: 7%;
   display: inline-block;
 }
@@ -68,6 +65,6 @@ p {
   right: 0;
   top: 0;
   bottom: 0;
-  margin-top: 10px;
-  margin-left: 10px;
+  margin-top: 8px;
+  margin-left: 8px;
 }

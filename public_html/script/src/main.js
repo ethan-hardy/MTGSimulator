@@ -1,5 +1,5 @@
 (function() {
-  $("#battlefield").height(window.innerHeight - $(".playerSection").outerHeight(true) * 2 - 20);
+  $("#battlefield").height(window.innerHeight - $(".playerSection").outerHeight(true) * 2 - 16);
   $("#cardLayer").append("<div class='card'>");
 
   var lastEvent;
