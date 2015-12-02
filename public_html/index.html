@@ -5,35 +5,32 @@
         <link rel="stylesheet" href="style/src/main.css">
     </head>
     <body>
-        <div class="playerSection">
-            <div id='oppHand' class="zone hand">
+        <div id="boardLayer" class="layer">
+            <div class="playerSection"><div id='oppHand' class="zone hand">
+                </div><div id='oppLibrary' class="zone singleCardZone">
+                    <p>Library</p>
+                </div><div id='oppGraveyard' class="zone singleCardZone">
+                    <p>Graveyard</p>
+                </div><div id='oppExile' class="zone singleCardZone">
+                    <p>Exile</p>
+                </div>
             </div>
-            <div id='oppLibrary' class="zone singleCardZone">
-                <p>Library</p>
-            </div>
-            <div id='oppGraveyard' class="zone singleCardZone">
-                <p>Graveyard</p>
-            </div>
-            <div id='oppExile' class="zone singleCardZone">
-                <p>Exile</p>
-            </div>
-        </div>
-        <div id='battlefield' class="zone">
-
-        </div>
-        <div class="playerSection">
-            <div id='yourHand' class="zone hand">
+            <div id='battlefield' class="zone">
 
             </div>
-            <div id='yourLibrary' class="zone singleCardZone">
-                <p>Library</p>
+            <div class="playerSection"><div id='yourHand' class="zone hand">
+
+                </div><div id='yourLibrary' class="zone singleCardZone">
+                    <p>Library</p>
+                </div><div id='yourGraveyard' class="zone singleCardZone">
+                    <p>Graveyard</p>
+                </div><div id='yourExile' class="zone singleCardZone">
+                    <p>Exile</p>
+                </div>
             </div>
-            <div id='yourGraveyard' class="zone singleCardZone">
-                <p>Graveyard</p>
-            </div>
-            <div id='yourExile' class="zone singleCardZone">
-                <p>Exile</p>
-            </div>
+        </div>
+        <div id="cardLayer" class="layer">
+
         </div>
         <script src = "jquery.min.js"></script>
         <script src="script/src/main.js"></script>

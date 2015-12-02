@@ -4,7 +4,7 @@ module.exports = {
     entry: './public_html/script/src/index.es6',
     output: {
         path: './public_html/',
-        filename: 'script/mtg.js'
+        filename: 'script/main.js'
     },
     module: {
         loaders: [
