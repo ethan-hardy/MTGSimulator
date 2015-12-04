@@ -11,7 +11,8 @@ body {
 }
 
 .zone {
-  background-image: url("../../resources/feltbackground.png");
+  background-image: url("../../resources/feltbackground.jpg");
+  background-size: 300px 300px;
   margin-right: 8px;
   margin-bottom: 8px;
   border-radius: 4px;
@@ -19,17 +20,18 @@ body {
 }
 
 .card {
-  background-image: url("../../resources/card.jpeg");
+  /*background-image: url("http://gatherer.wizards.com/Handlers/Image.ashx?type=card&name=counterspell");*/
+  /*background-image: url("../../resources/card.jpeg");*/
   height: 115px;
   width: 84px;
   border-radius: 5px;
   background-size: cover;
-  box-sizing: border-box;
   position: absolute;
 }
 
 .card:hover {
   box-sizing: content-box;
+  transform: translate(-1px, -1px);
   border: 1px solid rgb(247, 250, 196);
 }
 
@@ -49,6 +51,11 @@ p {
   color: white;
 }
 
+.shiftedText {
+  left: 40px;
+  width: auto;
+}
+
 #battlefield {
   width: calc(100% - 8px);
 }
@@ -57,6 +64,10 @@ p {
   height: 140px;
   width: 7%;
   display: inline-block;
+}
+
+.library {
+    background-image: url("http://gatherer.wizards.com/Handlers/Image.ashx?type=card&name=back");
 }
 
 .layer {
