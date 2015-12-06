@@ -1,19 +1,111 @@
+"use strict";
 (function() {
   $("#battlefield").height(window.innerHeight - $(".playerSection").outerHeight(true) * 2 - 16);
-  $("#cardLayer").append("<div class='card'>");
+
+  var cardImageLinkBase = "http://gatherer.wizards.com/Handlers/Image.ashx?type=card&name=";
+
+  class mtgCard {
+     // var isTapped, isFaceDown, isYourCard;
+     // var name, card;
+      constructor(nameParam, isYourCardP, cardP, zoneP) {
+          this.name = nameParam;
+          this.isYourCard = isYourCardP;
+          this.card = cardP;
+          this.isFaceDown = true;
+          this.isTapped = false;
+          this.zone = zoneP;
+      }
+
+      flip () {
+          if (this.isFaceDown === false) {
+              $(this.card).css('background-image', 'url('+ cardImageLinkBase + 'back' + ')');
+              this.isFaceDown = true;
+          }
+          else {
+              $(this.card).css('background-image', 'url('+ cardImageLinkBase + this.name + ')');
+              this.isFaceDown = false;
+          }
+      }
+  }
 
   var lastPosition;
   var cardSpacing = {x: 10, y: 5};
   var cardSize = {width: 84, height: 115};
 
   var cardSpots = [];
-  var numCards = 2;
+  var numCards = 0;
   var mouseHasMoved = false;
+  var yourGraveyardIndex, oppGraveyardIndex, yourLibraryIndex, oppLibraryIndex,
+        yourExileIndex, oppExileIndex, yourHandRange = {min: -1, max: 0}, oppHandRange = {min: -1, max: 0};
 
-  var yourLibrary = ["vryn%20wingmare", "mountain", "counterspell", "electrolyze"];
-  var oppLibrary = ["island", "mountain", "counterspell", "electrolyze"];
+  var yourLibraryList = ["vryn%20wingmare", "mountain", "counterspell", "electrolyze"];
+  var oppLibraryList = ["island", "mountain", "counterspell", "electrolyze"];
 
-  var cardImageLinkBase = "http://gatherer.wizards.com/Handlers/Image.ashx?type=card&name=";
+  var cardsInGame = []
+
+  var cardMouseDown = function(e) {
+    if ($(e.target).hasClass('card')) {
+        lastPosition = {card: e.target, x: e.clientX, y: e.clientY};
+    }
+    $(e.target).css('z-index', numCards + 1);
+    mouseHasMoved = false;
+};
+
+  var libraryMouseDown = function(e) {
+      if ($(e.target).hasClass("library")) {
+          var isInYourLibrary = false;
+          if (e.clientY > $(document).height() / 2) {
+              isInYourLibrary = true;
+          }
+        //   if (isInYourLibrary === true && yourLibraryList.length != 0 || isInYourLibrary === false && oppLibraryList.length != 0) {
+        //       placeNextCardFromLibrary(isInYourLibrary);
+        //   }
+      }
+  };
+
+  function addCardToSpot(card, spotIndex) {
+      for (var spot of cardSpots) {
+          var index = spot.cards.indexOf(card);
+          if (index >= 0) {
+              spot.cards.splice(index, 1);
+          }
+      }
+      $(card).animate({
+          top: cardSpots[spotIndex].y,
+          left: cardSpots[spotIndex].x
+      }, 100, "swing");
+      cardsInGame[$(card).attr('id')].zone = cardSpots[spotIndex].zone
+      cardSpots[spotIndex].cards.push(card);
+  }
+
+  function placeNextCardFromLibrary(isYourLibrary) {
+      if (isYourLibrary && yourLibraryList.length === 0 || !isYourLibrary && oppLibraryList.length === 0) return;
+      var spot = (isYourLibrary) ? cardSpots[yourLibraryIndex] : cardSpots[oppLibraryIndex];
+      spot.cards.push($("#cardLayer").append($("<div>")
+            .addClass('card library')
+            .attr('id', numCards.toString())
+          .css({
+              height: 115,
+              width: 84,
+              left: spot.x,
+              top: spot.y
+          })
+          .mousedown(libraryMouseDown)
+          .mousedown(cardMouseDown)
+          .hover(function(e) {
+              $(e.target).addClass('hovered');
+          }, function(e) {
+              $(e.target).removeClass('hovered');
+          })
+      )[0]);
+      if (isYourLibrary) {
+          cardsInGame.push(new mtgCard(yourLibraryList[yourLibraryList.length-1], true, $('#'+numCards.toString()), ('yourLibrary')));
+      }
+      else {
+          cardsInGame.push(new mtgCard(oppLibraryList[oppLibraryList.length-1], false, $('#'+numCards.toString()), ('oppLibrary')));
+      }
+      numCards++
+  }
 
   $(".zone").each(function(index, zone) {
       var wid = $(zone).width(), hgt = $(zone).height();
@@ -30,62 +122,79 @@
       for (var x = initialX; x + initialX + cardSize.width <= wid; x += (cardSpacing.x + cardSize.width)) {
           if (initialY == 12.5) {
               var y = initialY;
-              cardSpots.push({x: x + $(zone).offset().left, y: y + $(zone).offset().top, cards: []});
+              cardSpots.push({x: x + $(zone).offset().left, y: y + $(zone).offset().top, cards: [], zone: $(zone).attr('id')});
+              switch ($(zone).attr('id')) {
+                  case 'oppHand':
+                    if (oppHandRange.min === -1)
+                        oppHandRange = {min: cardSpots.length-1, max: cardSpots.length-1};
+                    else
+                        oppHandRange.max++;
+                    break;
+                  case 'oppLibrary':
+                    oppLibraryIndex = cardSpots.length-1;
+                    break;
+                  case 'oppGraveyard':
+                    oppGraveyardIndex = cardSpots.length-1;
+                    break;
+                  case 'oppExile':
+                    oppExileIndex = cardSpots.length-1;
+                    break;
+                  case 'yourHand':
+                    if (yourHandRange.min === -1)
+                        yourHandRange = {min: cardSpots.length-1, max: cardSpots.length-1};
+                    else
+                        yourHandRange.max++;
+                    break;
+                  case 'yourLibrary':
+                    yourLibraryIndex = cardSpots.length-1;
+                    break;
+                  case 'yourGraveyard':
+                    yourGraveyardIndex = cardSpots.length-1;
+                    break;
+                  case 'yourExile':
+                    yourExileIndex = cardSpots.length-1;
+                    break;
+              }
               if ($(zone).attr('id') === "yourLibrary" || $(zone).attr('id') === "oppLibrary") {
-                  $("#cardLayer").append($("<div class='card library'>").css({
-                      height: 115,
-                      width: 84,
-                      left: x + $(zone).offset().left,
-                      top: y + $(zone).offset().top
-                  }));
+                  var yes = $(zone).offset().top > $(document).height() / 2;
+                  placeNextCardFromLibrary(yes);
+                  if (yes) {
+                      yourLibraryList.pop();
+                  }
+                  else {
+                      oppLibraryList.pop();
+                  }
               }
           }
           else {
               for (var y = initialY; y + initialY / 2 + cardSize.height <= hgt / 2; y += (cardSpacing.y + cardSize.height)) {
-                  cardSpots.push({x: x + $(zone).offset().left, y: y + $(zone).offset().top - 8, cards: []});
-                  cardSpots.push({x: x + $(zone).offset().left, y: hgt - y - cardSize.height + $(zone).offset().top - 8, cards: []});
+                  cardSpots.push({x: x + $(zone).offset().left, y: y + $(zone).offset().top - 8, cards: [], zone: $(zone).attr('id')});
+                  cardSpots.push({x: x + $(zone).offset().left, y: hgt - y - cardSize.height + $(zone).offset().top - 8, cards: [], zone: $(zone).attr('id')});
               }
           }
       }
   })
 
-  var cardMouseDown = function(e) {
-    if ($(e.target).hasClass('card')) {
-        lastPosition = {card: e.target, x: e.clientX, y: e.clientY};
-    }
-    $(e.target).css('z-index', numCards + 1);
-    mouseHasMoved = false;
-};
+  //$(".library").mousedown(libraryMouseDown);
 
-  var libraryMouseDown = function(e) {
-      if ($(e.target).hasClass("library")) {
-          $("#cardLayer").append($("<div class='card library'>").css({
-              height: 115,
-              width: 84,
-              left: $(e.target).offset().left - 7,
-              top: $(e.target).offset().top - 7
-          })).mousedown(libraryMouseDown).mousedown(cardMouseDown);
-          numCards++
-      }
-  };
-
-  $(".library").mousedown(libraryMouseDown);
-
-  $(".card").mousedown(cardMouseDown);
+  //$(".card").mousedown(cardMouseDown);
 
   $(window).mouseup(function() {
       if (lastPosition !== undefined) {
           var currentSpot, dist;
-          if ($(lastPosition.card).hasClass('library') && mouseHasMoved === false) {
-              var minX = lastPosition.x;
-              for (var spot of cardSpots) {
-                  var delta = spot.y - $(lastPosition.card).offset().top, cardX = $(lastPosition.card).offset().left;
-                  if (-10 < delta && delta < 10 && spot.cards.length === 0 && spot.x <= minX) {
-                      currentSpot = spot;
-                      minX = spot.x;
-                      dist = (spot.x - cardX) * (spot.x - cardX);
-                  }
+          if (mouseHasMoved === false) {
+              var cardData = cardsInGame[$(lastPosition.card).attr('id')];
+              if (cardData.zone.indexOf('Library') !== -1) {
+                  keyBindings['A'](lastPosition.card);
               }
+              else if (cardData.zone.indexOf('Hand') !== -1) {
+                  keyBindings['B'](lastPosition.card);
+              }
+              else if (cardData.zone.indexOf('battlefield') !== -1) {
+                  keyBindings['T'](lastPosition.card);
+              }
+              lastPosition = undefined;
+              return;
           }
           else {
               var minDist = $(window).width() * $(window).width();
@@ -100,15 +209,19 @@
               }
           }
 
-          if ($(lastPosition.card).hasClass('library'))
-              $(lastPosition.card).removeClass('library').css('background-image', 'url('+ cardImageLinkBase + yourLibrary.pop() + ')');
+          if ($(lastPosition.card).hasClass('library')) {
+              var curCard = cardsInGame[$(lastPosition.card).removeClass('library').attr('id')];
+              curCard.flip();
+              if (curCard.isYourCard === true) {
+                  yourLibraryList.pop();
+              }
+              else {
+                  oppLibraryList.pop();
+              }
 
-          cardSpots[cardSpots.indexOf(currentSpot)].cards.push(lastPosition.card);
+          }
 
-          $(lastPosition.card).animate({
-              top: currentSpot.y,
-              left: currentSpot.x
-          }, dist / 4000, "swing");
+          addCardToSpot(lastPosition.card, cardSpots.indexOf(currentSpot));
 
 
 
@@ -121,17 +234,114 @@
         //  if ($(lastPosition.card).hasClass('library'))
         //      $(lastPosition.card).removeClass('library');
           var offset = $(lastPosition.card).offset();
-          deltaY = e.clientY - lastPosition.y;
-          deltaX = e.clientX - lastPosition.x;
+          var deltaY = e.clientY - lastPosition.y;
+          var deltaX = e.clientX - lastPosition.x;
           $(lastPosition.card).offset({
               top: offset.top + deltaY,
               left: offset.left + deltaX
           });
           lastPosition.x = e.clientX;
           lastPosition.y = e.clientY;
+          if (mouseHasMoved === false && $(lastPosition.card).hasClass('library')) {
+              placeNextCardFromLibrary(cardsInGame[$(lastPosition.card).attr('id')].isYourCard);
+          }
       }
       mouseHasMoved = true;
       return false;
+  });
+
+  var keyBindings = {
+      T: function(card) { //tap
+          if ($(card).hasClass('library')) return;
+          var cardData = cardsInGame[$(card).attr('id')];
+          if (cardData.isTapped === true) {
+              $(card).css({
+                  'transform': 'inherit'
+              });
+              cardData.isTapped = false;
+          }
+          else {
+              $(card).css({
+                  'transform': 'rotate(90deg)'
+              });
+              cardData.isTapped = true;
+          }
+      },
+      G: function(card) { //graveyard
+          var cardData = cardsInGame[$(card).attr('id')];
+          if ($(card).hasClass('library')) {
+              $(card).removeClass('library');
+              placeNextCardFromLibrary(cardData.isYourCard);
+              (cardData.isYourCard) ? yourLibraryList.pop() : oppLibraryList.pop();
+          }
+          var cardData = cardsInGame[$(card).attr('id')];
+          if (cardData.isFaceDown) cardData.flip();
+          var destinationIndex = oppGraveyardIndex;
+          if (cardData.isYourCard === true) {
+              destinationIndex = yourGraveyardIndex;
+          }
+          addCardToSpot(card, destinationIndex);
+      },
+      Y: function(card) { //top of library
+          if (!$(card).hasClass('library')) $(card).addClass('library');
+          var cardData = cardsInGame[$(card).attr('id')];
+          if (!cardData.isFaceDown) cardData.flip();
+          var destinationIndex = oppLibraryIndex;
+          if (cardData.isYourCard === true) {
+              destinationIndex = yourLibraryIndex;
+          }
+          addCardToSpot(card, destinationIndex);
+      },
+      X: function(card) { //exile
+          var cardData = cardsInGame[$(card).attr('id')];
+          if ($(card).hasClass('library')) {
+              $(card).removeClass('library');
+              placeNextCardFromLibrary(cardData.isYourCard);
+              (cardData.isYourCard) ? yourLibraryList.pop() : oppLibraryList.pop();
+          }          var cardData = cardsInGame[$(card).attr('id')];
+          if (cardData.isFaceDown) cardData.flip();
+          var destinationIndex = oppExileIndex;
+          if (cardData.isYourCard === true) {
+              destinationIndex = yourExileIndex;
+          }
+          addCardToSpot(card, destinationIndex);
+      },
+      B: function(card) { //battlefield
+          var cardData = cardsInGame[$(card).attr('id')];
+          if ($(card).hasClass('library')) {
+              $(card).removeClass('library');
+              placeNextCardFromLibrary(cardData.isYourCard);
+              (cardData.isYourCard) ? yourLibraryList.pop() : oppLibraryList.pop();
+          }          console.log('fuck this shit');
+      },
+      A: function(card) {
+          var cardData = cardsInGame[$(card).attr('id')];
+          if ($(card).hasClass('library')) {
+              $(card).removeClass('library');
+              placeNextCardFromLibrary(cardData.isYourCard);
+              (cardData.isYourCard) ? yourLibraryList.pop() : oppLibraryList.pop();
+          }
+          if (cardData.isFaceDown) cardData.flip();
+          var destinationRange = oppHandRange;
+          if (cardData.isYourCard === true) {
+              destinationRange = yourHandRange;
+          }
+          var destinationIndex;
+          for (var i = destinationRange.min; i <= destinationRange.max; i++) {
+              if (cardSpots[i].cards.length === 0) {
+                  destinationIndex = i;
+                  break;
+              }
+          }
+          addCardToSpot(card, destinationIndex);
+      }
+  };
+
+  $(window).keydown(function(e) {
+     var c = String.fromCharCode(e.which);
+     var hoverCard = $('.hovered');
+     if (hoverCard !== undefined)
+        keyBindings[c](hoverCard[0]);
   });
 
 })()
