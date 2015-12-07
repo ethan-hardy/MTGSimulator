@@ -3,6 +3,7 @@
   $("#battlefield").height(window.innerHeight - $(".playerSection").outerHeight(true) * 2 - 16);
 
   var cardImageLinkBase = "http://gatherer.wizards.com/Handlers/Image.ashx?type=card&name=";
+  var landList;
 
   class mtgCard {
      // var isTapped, isFaceDown, isYourCard;
@@ -14,6 +15,17 @@
           this.isFaceDown = true;
           this.isTapped = false;
           this.zone = zoneP;
+          this.isLand = undefined;
+      }
+
+      setIsLand() {
+          this.isLand = false;
+          for (var landName of landList) {
+              if (landName.toLowerCase() === this.name) {
+                  this.isLand = true;
+                  break;
+              }
+          }
       }
 
       flip () {
@@ -25,6 +37,9 @@
               $(this.card).css('background-image', 'url('+ cardImageLinkBase + this.name + ')');
               this.isFaceDown = false;
           }
+          if (this.isLand === undefined) {
+              this.setIsLand();
+          }
       }
   }
 
@@ -35,13 +50,17 @@
   var cardSpots = [];
   var numCards = 0;
   var mouseHasMoved = false;
-  var yourGraveyardIndex, oppGraveyardIndex, yourLibraryIndex, oppLibraryIndex,
+  var yourGraveyardIndex, oppGraveyardIndex, yourLibraryIndex, oppLibraryIndex, battlefieldRange = {min: -1, max: 0},
         yourExileIndex, oppExileIndex, yourHandRange = {min: -1, max: 0}, oppHandRange = {min: -1, max: 0};
 
   var yourLibraryList = ["vryn%20wingmare", "mountain", "counterspell", "electrolyze"];
   var oppLibraryList = ["island", "mountain", "counterspell", "electrolyze"];
 
   var cardsInGame = []
+
+  $.get('http://localhost:8000/resources/list.txt', function(data) {
+      landList = data.split('\n');
+  });
 
   var cardMouseDown = function(e) {
     if ($(e.target).hasClass('card')) {
@@ -167,7 +186,10 @@
               }
           }
           else {
+              if (battlefieldRange.min === -1)
+                  battlefieldRange = {min: cardSpots.length-1, max: cardSpots.length-2};
               for (var y = initialY; y + initialY / 2 + cardSize.height <= hgt / 2; y += (cardSpacing.y + cardSize.height)) {
+                  battlefieldRange.max += 2;
                   cardSpots.push({x: x + $(zone).offset().left, y: y + $(zone).offset().top - 8, cards: [], zone: $(zone).attr('id')});
                   cardSpots.push({x: x + $(zone).offset().left, y: hgt - y - cardSize.height + $(zone).offset().top - 8, cards: [], zone: $(zone).attr('id')});
               }
@@ -184,7 +206,7 @@
           var currentSpot, dist;
           if (mouseHasMoved === false) {
               var cardData = cardsInGame[$(lastPosition.card).attr('id')];
-              if (cardData.zone.indexOf('Library') !== -1) {
+              if (cardData.zone.indexOf('Library') !== -1 || cardData.zone.indexOf('Graveyard') !== -1 || cardData.zone.indexOf('Exile') !== -1) {
                   keyBindings['A'](lastPosition.card);
               }
               else if (cardData.zone.indexOf('Hand') !== -1) {
@@ -311,8 +333,28 @@
           if ($(card).hasClass('library')) {
               $(card).removeClass('library');
               placeNextCardFromLibrary(cardData.isYourCard);
+              if (cardData.isFaceDown) cardData.flip();
               (cardData.isYourCard) ? yourLibraryList.pop() : oppLibraryList.pop();
-          }          console.log('fuck this shit');
+          }
+          var yCoord; //rowSize = (battlefieldRange.max - battlefieldRange.min + 1) / 4;
+          if (cardData.isYourCard) {
+              if (cardData.isLand) yCoord = $('#battlefield').height() - cardSpacing.y - cardSize.height + $('#battlefield').offset().top - 8;
+              else yCoord = $('#battlefield').height() - cardSpacing.y * 2 - cardSize.height - cardSize.height + $('#battlefield').offset().top - 8;
+          }
+          else {
+              if (cardData.isLand) yCoord = cardSpacing.y + $('#battlefield').offset().top - 8;
+              else yCoord = 2 * cardSpacing.y + cardSize.height + $('#battlefield').offset().top - 8;
+          }
+          var minX = 300000, currentSpotIndex;
+          for (var i = battlefieldRange.min; i <= battlefieldRange.max; i++) {
+              if (cardSpots[i].y === yCoord && cardSpots[i].cards.length === 0 && cardSpots[i].x <= minX) {
+                  minX = cardSpots[i].x;
+                  currentSpotIndex = i;
+              }
+          }
+          if (currentSpotIndex !== undefined) {
+              addCardToSpot(card, currentSpotIndex);
+          }
       },
       A: function(card) {
           var cardData = cardsInGame[$(card).attr('id')];
