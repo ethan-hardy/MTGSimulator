@@ -1,7 +1,7 @@
 "use strict";
 (function() {
-  $("#battlefield").height(window.innerHeight - $(".playerSection").outerHeight(true) * 2 - 16);
-
+  $("#battlefield").height(window.innerHeight - $(".playerSection").outerHeight(true) * 2 - 16 - $('.menuBar').height() * 2);
+  $('#bottomBar').offset({top: $('#cardLayer').height() + $('.menuBar').height() + 8});
   var cardImageLinkBase = "http://gatherer.wizards.com/Handlers/Image.ashx?type=card&name=";
   var landList;
 
@@ -45,10 +45,10 @@
 
   var lastPosition;
   var cardSpacing = {x: 10, y: 5};
-  var cardSize = {width: 84, height: 115};
+  var cardSize = {width: 76, height: 105};
 
   var cardSpots = [];
-  var numCards = 0;
+  var numCards = 0, zIndexCount = 0;
   var mouseHasMoved = false;
   var yourGraveyardIndex, oppGraveyardIndex, yourLibraryIndex, oppLibraryIndex, battlefieldRange = {min: -1, max: 0},
         yourExileIndex, oppExileIndex, yourHandRange = {min: -1, max: 0}, oppHandRange = {min: -1, max: 0};
@@ -66,7 +66,7 @@
     if ($(e.target).hasClass('card')) {
         lastPosition = {card: e.target, x: e.clientX, y: e.clientY};
     }
-    $(e.target).css('z-index', numCards + 1);
+    $(e.target).css('z-index', zIndexCount++ + 1);
     mouseHasMoved = false;
 };
 
@@ -104,8 +104,8 @@
             .addClass('card library')
             .attr('id', numCards.toString())
           .css({
-              height: 115,
-              width: 84,
+              height: cardSize.height,
+              width: cardSize.width,
               left: spot.x,
               top: spot.y
           })
@@ -130,7 +130,7 @@
       var wid = $(zone).width(), hgt = $(zone).height();
       var initialX = cardSpacing.x, initialY = cardSpacing.y;
       if (2 * cardSpacing.x + cardSize.width > wid) {
-          initialX = 0;//(wid - cardSize.width) / 2;
+          initialX = -3;//(wid - cardSize.width) / 2;
       }
       if (2 * cardSpacing.y + cardSize.height > hgt) {
           initialY = 0;//(hgt - cardSize.height) / 2;
@@ -141,7 +141,7 @@
       for (var x = initialX; x + initialX + cardSize.width <= wid; x += (cardSpacing.x + cardSize.width)) {
           if (initialY == 12.5) {
               var y = initialY;
-              cardSpots.push({x: x + $(zone).offset().left, y: y + $(zone).offset().top, cards: [], zone: $(zone).attr('id')});
+              cardSpots.push({x: x + $(zone).offset().left, y: y + $(zone).offset().top - $('.menuBar').height(), cards: [], zone: $(zone).attr('id')});
               switch ($(zone).attr('id')) {
                   case 'oppHand':
                     if (oppHandRange.min === -1)
@@ -190,12 +190,22 @@
                   battlefieldRange = {min: cardSpots.length-1, max: cardSpots.length-2};
               for (var y = initialY; y + initialY / 2 + cardSize.height <= hgt / 2; y += (cardSpacing.y + cardSize.height)) {
                   battlefieldRange.max += 2;
-                  cardSpots.push({x: x + $(zone).offset().left, y: y + $(zone).offset().top - 8, cards: [], zone: $(zone).attr('id')});
-                  cardSpots.push({x: x + $(zone).offset().left, y: hgt - y - cardSize.height + $(zone).offset().top - 8, cards: [], zone: $(zone).attr('id')});
+                  cardSpots.push({x: x + $(zone).offset().left, y: y + $(zone).offset().top - 8 - $('.menuBar').height(), cards: [], zone: $(zone).attr('id')});
+                  cardSpots.push({x: x + $(zone).offset().left, y: hgt - y - cardSize.height + $(zone).offset().top - 8 - $('.menuBar').height(), cards: [], zone: $(zone).attr('id')});
               }
           }
       }
   })
+
+  $('.menuBarSelect').each(function(index, obj) {
+      for (var i = 0; i <= 300; i++) {
+          $(obj).append('<option>' + i.toString() + '</option>');
+      }
+      if (obj.previousSibling.data === 'Poison: 10') $(obj).val('10').prop('selected', true)
+      else  $(obj).val('20').prop('selected', true)
+  }).change(function() {
+      $(this.previousSibling).replaceWith(this.previousSibling.data.split(' ')[0] + ' ' + $(this).val().toString());
+  });
 
   //$(".library").mousedown(libraryMouseDown);
 
@@ -347,7 +357,7 @@
           }
           var minX = 300000, currentSpotIndex;
           for (var i = battlefieldRange.min; i <= battlefieldRange.max; i++) {
-              if (cardSpots[i].y === yCoord && cardSpots[i].cards.length === 0 && cardSpots[i].x <= minX) {
+              if (cardSpots[i].y === yCoord - $('.menuBar').height() && cardSpots[i].cards.length === 0 && cardSpots[i].x <= minX) {
                   minX = cardSpots[i].x;
                   currentSpotIndex = i;
               }
@@ -382,8 +392,10 @@
   $(window).keydown(function(e) {
      var c = String.fromCharCode(e.which);
      var hoverCard = $('.hovered');
-     if (hoverCard !== undefined)
-        keyBindings[c](hoverCard[0]);
+     if (hoverCard !== undefined) {
+         hoverCard.css('z-index', zIndexCount++ + 1);
+         keyBindings[c](hoverCard[0]);
+    }
   });
 
 })()
