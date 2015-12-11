@@ -1,0 +1,51 @@
+<!DOCTYPE HTML>
+
+<html>
+    <head>
+        <link rel="stylesheet" href="style/src/game.css">
+        <link rel="shortcut icon" href="resources/favicon.ico">
+        <title>Magic Simulator</title>
+    </head>
+    <body>
+        <div class='menuBar'>
+            <div class='menuBarItem'>Life: 20<select class='menuBarSelect'></select></div>
+            <div class='menuBarItem'>Poison: 10<select class='menuBarSelect'></select></div>
+            <div class='menuBarItem restartButton'>Restart</div>
+        </div>
+        <div id="boardLayer" class="layer">
+            <div class="playerSection"><div id='oppHand' class="zone hand">
+                    <p class="shiftedText">Hand</p>
+                </div><div id='oppLibrary' class="zone singleCardZone">
+                    <p>Library</p>
+                </div><div id='oppGraveyard' class="zone singleCardZone">
+                    <p>Graveyard</p>
+                </div><div id='oppExile' class="zone singleCardZone">
+                    <p>Exile</p>
+                </div>
+            </div>
+            <div id='battlefield' class="zone">
+
+            </div>
+            <div class="playerSection"><div id='yourHand' class="zone hand">
+                    <p class="shiftedText">Hand</p>
+                </div><div id='yourLibrary' class="zone singleCardZone">
+                    <p>Library</p>
+                </div><div id='yourGraveyard' class="zone singleCardZone">
+                    <p>Graveyard</p>
+                </div><div id='yourExile' class="zone singleCardZone">
+                    <p>Exile</p>
+                </div>
+            </div>
+        </div>
+        <div id="cardLayer" class="layer">
+
+        </div>
+        <div class='menuBar' id='bottomBar'>
+            <div class='menuBarItem'>Life: 20<select class='menuBarSelect'></select></div>
+            <div class='menuBarItem'>Poison: 10<select class='menuBarSelect'></select></div>
+            <div class='menuBarItem restartButton'>Restart</div>
+        </div>
+        <script src = "jquery.min.js"></script>
+        <script src="script/src/game.js"></script>
+    </body>
+</html>
