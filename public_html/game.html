@@ -7,10 +7,14 @@
         <title>Magic Simulator</title>
     </head>
     <body>
-        <div class='menuBar'>
-            <div class='menuBarItem'>Life: 20<select class='menuBarSelect'></select></div>
-            <div class='menuBarItem'>Poison: 10<select class='menuBarSelect'></select></div>
+        <div class='menuBar' id='oppMenuBar'>
+            <div class='menuBarItem'>Life: 20<select class='menuBarSelect numCounterSelect'></select></div>
+            <div class='menuBarItem'>Poison: 10<select class='menuBarSelect numCounterSelect'></select></div>
             <div class='menuBarItem restartButton'>Restart</div>
+            <div class='menuBarItem rollButton'>Roll</div>
+            <div class='menuBarItem shuffleButton'>Shuffle</div>
+            <div class='menuBarItem'>__<select class='menuBarSelect' id='oppCardSelect'></select></div>
+            <div class='menuBarItem drawCardsButton'>Draw <select class='drawNumberSelect'></select></div>
         </div>
         <div id="boardLayer" class="layer">
             <div class="playerSection"><div id='oppHand' class="zone hand">
@@ -40,11 +44,16 @@
         <div id="cardLayer" class="layer">
 
         </div>
-        <div class='menuBar' id='bottomBar'>
-            <div class='menuBarItem'>Life: 20<select class='menuBarSelect'></select></div>
-            <div class='menuBarItem'>Poison: 10<select class='menuBarSelect'></select></div>
+        <div class='menuBar' id='yourMenuBar'>
+            <div class='menuBarItem'>Life: 20<select class='menuBarSelect numCounterSelect'></select></div>
+            <div class='menuBarItem'>Poison: 10<select class='menuBarSelect numCounterSelect'></select></div>
             <div class='menuBarItem restartButton'>Restart</div>
+            <div class='menuBarItem rollButton'>Roll</div>
+            <div class='menuBarItem shuffleButton'>Shuffle</div>
+            <div class='menuBarItem'>__<select class='menuBarSelect' id='yourCardSelect'></select></div>
+            <div class='menuBarItem drawCardsButton'>Draw <select class='drawNumberSelect'></select></div>
         </div>
+        <script src="socket.io.js"></script>
         <script src = "jquery.min.js"></script>
         <script src="script/src/game.js"></script>
     </body>

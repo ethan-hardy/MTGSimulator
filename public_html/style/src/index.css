@@ -13,6 +13,20 @@ body {
   bottom: 0px;
 }
 
+#topLayer {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.5);
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  visibility: hidden;
+}
+
+#playButton {
+  font-size: 1.7em;
+}
+
 .deckListEntryWrapper {
   display: inline-block;
   width: calc(50% - 2 * 20px);
@@ -23,6 +37,7 @@ body {
 .deckListEntryOptionsContainer {
   display: flex;
   justify-content: space-between;
+  /*align-items: flex-end;*/
   margin-bottom: 10px;
 }
 
@@ -49,12 +64,66 @@ p {
   margin-bottom: 10px;
 }
 
-.mtgButton:hover {
-  background-color: rgb(71, 91, 63);
+.headText {
+  font-size: 2.2em;
+  font-family: Candara,Calibri,Segoe,Segoe UI,Optima,Arial,sans-serif;
+  font-weight: 550;
+  color: rgb(148, 149, 145);
 }
 
-.mtgButton:active {
-  background-color: rgb(58, 75, 51);
+.leftAlign {
+  text-align: left;
+  margin-bottom: 0px;
+  margin-top: 20px;
+}
+
+.textInput {
+  border-radius: 4px;
+  border: none;
+  outline: none;
+  height: 40px;
+  width: 360px;
+  font: inherit;
+  font-size: 30px;
+  line-height: 40px;
+  padding-left: 8px;
+  display: inline-block;
+}
+
+#title {
+  font-size: 2.4em;
+  font-family: Candara,Calibri,Segoe,Segoe UI,Optima,Arial,sans-serif;
+  font-weight: 550;
+  margin-bottom: 0px;
+  color: rgb(148, 149, 145);
+}
+
+#accountSection {
+  display: inline-block;
+  position: absolute;
+  right: 19px;
+  top: 14px;
+  text-align: left;
+  font-family: 'Gill Sans';
+  font-weight: 400;
+  font-size: 1.4em;
+  color: rgb(111, 122, 157);
+}
+
+#signin {
+  display: inline-block;
+  margin-left: 15px;
+  width: 100px;
+  height: 50px;
+  font-weight: 300;
+  line-height: 50px;
+}
+
+#popUpButtonContainer {
+  display: flex;
+  bottom: 0px;
+  justify-content: space-between;
+  padding-top: 30px;
 }
 
 .mtgButton {
@@ -67,6 +136,38 @@ p {
   font: inherit;
   color: rgb(254, 255, 252);
 }
+
+.popUpButton {
+  display: inline-block;
+  width: 220px;
+  height: 70px;
+  line-height: 70px;
+  margin: auto;
+  font-size: 30px;
+  color: rgba(154, 159, 167, 0.9);
+}
+
+.mtgButton:hover {
+  background-color: rgb(71, 91, 63);
+}
+
+.mtgButton:active {
+  background-color: rgb(58, 75, 51);
+}
+
+.popUp {
+  background-color: rgb(37, 37, 37);
+  margin: auto;
+  height: 400px;
+  width: 600px;
+  font: inherit;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  color: rgb(215, 214, 205);
+  padding: 8px 32px 8px 32px;
+}
+
 
 .inputButton {
   margin: 15px auto;
@@ -96,6 +197,41 @@ p {
   background-color: rgb(254, 255, 252);
   font: inherit;
   font-size: 1.2em;
+  padding: 8px;
   /*margin: auto 10px 16px auto;*/
   margin: auto;
+}
+
+.errorText {
+  color: red;
+  text-align: right;
+  font-weight: 600;
+  font-size: 1em;
+  margin-left: 22px;
+  margin-top: 8px;
+  display: inline-block;
+  vertical-align: top;
+  visibility: hidden;
+}
+
+input:focus::-webkit-input-placeholder {
+  color:transparent;
+}
+
+.deckTitle {
+  position: relative;
+  height: 40px;
+  font-size: 1.6em;
+  line-height: 40px;
+  text-align: center;
+  left: 50%;
+  transform: translate(-50%);
+  margin-top: 5px;
+  margin-bottom: 15px;
+  background-color: rgba(144, 144, 144, 0.1);
+}
+
+#hiddenSelect {
+  visibility: hidden;
+  position: absolute;
 }

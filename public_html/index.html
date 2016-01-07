@@ -7,22 +7,29 @@
         <title>Magic Simulator</title>
     </head>
     <body>
+        <select id='hiddenSelect'></select>
         <div id='background'>
-            <div class='deckListEntryWrapper'>
-                <p>Your decklist</p>
+            <div>
+                <p id='title'>Magic the Gathering Simulator
+                </p><div id='accountSection'>
+                    <span id='usernameLabel'></span>
+                    <div class='mtgButton' id='signin'>
+                        Sign In
+                    </div>
+                </div>
+            </div>
+            <div class='deckListEntryWrapper' id='yourSide'>
+                <input type='text' class='textInput deckTitle' placeholder="Your Decklist">
                 <div class='deckListEntryOptionsContainer'>
-                    <select>
-                        <option>New deck</option>
+                    <select class='deckSelect'>
                     </select><button
                         class="mtgButton saveButton">Save</button>
                 </div>
-                <textarea class='deckListEntry saveButton'></textarea>
-            </div><div class='deckListEntryWrapper'>
-                <p>Opponent's decklist</p>
+                <textarea class='deckListEntry'></textarea>
+            </div><div class='deckListEntryWrapper' id='oppSide'>
+                <input type='text' class='textInput deckTitle' placeholder="Oppenent's Decklist">
                 <div class='deckListEntryOptionsContainer'>
-                    <select>
-                        <option>New deck</option>
-                        <option>Challenge a friend</option>
+                    <select class='deckSelect'>
                     </select><button
                         class="mtgButton saveButton">Save</button>
                 </div>
@@ -30,6 +37,33 @@
             </div>
             <a href='game.html' class='mtgButton inputButton' id='playButton'>Play</a>
         </div>
+        <div id='topLayer'>
+            <div class='popUp' id='signInPopUp'>
+                <p class='headText'>Sign In</p>
+                <p class="leftAlign">
+                    Username
+                </p>
+                <input type='text' class="textInput" id='usernameInput'>
+                <p class='errorText' id='usernameError'>
+                    Unknown username
+                </p>
+                <p class="leftAlign">
+                    Password
+                </p>
+                <input type='password' class="textInput" id='passwordInput'>
+                <p class='errorText' id='passwordError'>
+                    Incorrect password
+                </p>
+                <div id="popUpButtonContainer">
+                    <div class='mtgButton popUpButton' id="signInFromPopUp">
+                        Sign In
+                    </div><div class='mtgButton popUpButton' id="signUpFromPopUp">
+                        Sign Up
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script src="socket.io.js"></script>
         <script src='jquery.min.js'></script>
         <script src='script/src/index.js'></script>
     </body>
