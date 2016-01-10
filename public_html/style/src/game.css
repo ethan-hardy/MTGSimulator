@@ -42,7 +42,7 @@ body {
 
 .hand {
   height: 130px;
-  width: calc(82% - 32px);
+  width: calc(100% - 32px - 86px * 3);
   display: inline-block;
 }
 
@@ -108,7 +108,7 @@ p {
 
 .singleCardZone {
   height: 130px;
-  width: 6%;
+  width: 86px;
   display: inline-block;
 }
 

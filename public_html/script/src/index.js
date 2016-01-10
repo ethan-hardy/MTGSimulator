@@ -23,6 +23,12 @@
             socket.emit('acceptOrDeclineChallenge', challengerUsername, currentUser.username, true);
             $(this).unbind('click');
             topLayerClick({target: $('#topLayer')[0]});
+            sessionStorage.yourUsernameStore = currentUser.username;
+            console.log(challengerUsername);
+            sessionStorage.opponentUsername = challengerUsername;
+            sessionStorage.isHost = "false";
+            // sessionStorage[currentUser.username] = JSON.stringify({isHost: "false", opponentUsername: challengerUsername});
+            $('#playButton')[0].click();
         });
         $('#declineChallengeButton').on('click', function() { //acceptOrDeclineChallenge', function(challengeIniatorUsername, challegeResponderUsername, challengeWasAccepted)
             socket.emit('acceptOrDeclineChallenge', challengerUsername, currentUser.username, false);
@@ -41,6 +47,14 @@
             showPopUpWithIdSelector('#notificationPopUp', true);
             $('#notificationMessage').text(challegeResponderUsername + " accepted your challenge!");
             $('#loadingSection').css({'display': 'none'});
+            
+            sessionStorage.yourUsernameStore = currentUser.username;
+            sessionStorage.opponentUsername = challegeResponderUsername;
+            sessionStorage.isHost = "true";
+
+            // sessionStorage[currentUser.username] = JSON.stringify({isHost: "true", opponentUsername: challegeResponderUsername});
+
+            window.setTimeout(() => $('#playButton')[0].click(), 1000);
         }
     });
 

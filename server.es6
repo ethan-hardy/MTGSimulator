@@ -68,4 +68,13 @@ io.on('connection', (socket) => {
             console.log("User " + username + " disconnected; " + numConnectedUsers + " users now connected");
         }
     });
+    socket.on('joinRoom', function(roomName) {
+        socket.join(roomName);
+    });
+    socket.on('broadcastToRoom', function(roomName, functionName, args) {
+        console.log(roomName);
+        console.log(functionName);
+        console.log(args);
+        socket.broadcast.to(roomName).emit(functionName, args);
+    });
 });

@@ -3,7 +3,64 @@
   $("#battlefield").height(window.innerHeight - $(".playerSection").outerHeight(true) * 2 - 16 - $('.menuBar').height() * 2);
   $('#yourMenuBar').offset({top: $('#cardLayer').height() + $('.menuBar').height() + 8});
   var cardImageLinkBase = "http://gatherer.wizards.com/Handlers/Image.ashx?type=card&name=";
+  var socket, roomName, opponentUsername, yourUsername;
   var landList;
+  var isMultiplayerSession = false;
+
+  if (sessionStorage.isHost !== undefined) {
+      yourUsername = sessionStorage.yourUsernameStore;
+      let objs = JSON.parse(sessionStorage[yourUsername]);
+      opponentUsername = objs.opponentUsername;
+      console.log(opponentUsername);
+      isMultiplayerSession = true;
+      if (objs.isHost === "true") {
+          roomName = yourUsername + "'s and " + opponentUsername + "'s match room";
+      }
+      else {
+          roomName = opponentUsername + "'s and " + yourUsername + "'s match room";
+      }
+      socket = io();
+      socket.emit('joinRoom', roomName);
+
+      socket.on('moveCardToSpot', function(args/*{card, spotIndex}*/) {
+          //this shouldn't be called with a card that doesn't exist on the receiving end
+          //the spotIndex passed is the SENDER's spot; this function then converts it
+          if (args.spotIndex < battlefieldRange.min || args.spotIndex > battlefieldRange.max) { //not on the battlefield
+              let battlefieldSize = (battlefieldRange.max - battlefieldRange.min + 1);
+              let row = battlefieldSize / (args.spotIndex - battlefieldRange.min), rowSize = battlefieldSize / 4;
+              let destinationRow = 3 - row;
+              let column = rowSize % (args.spotIndex - battlefieldRange.min);
+              args.spotIndex = destinationRow * rowSize + column + battlefieldRange.min;
+          }
+          else if (args.spotIndex > cardSpots.length / 2) {
+              args.spotIndex = oppExileIndex - (cardSpots.length - args.spotIndex - 1);
+          }
+          else {
+              args.spotIndex = cardSpots.length - (oppExileIndex - args.spotIndex - 1);
+          }
+          addCardToSpot(args.card, args.spotIndex);
+      });
+
+      socket.on('receiveDeckList', function(args/*newDeckList, newDeckOrderedList, numCardsToRedraw*/) { //numCardsToRedraw = -1 for no change
+          if (args.numCardsToRedraw >= 0) {  //the new decklists must be passed BEFORE drawing the cards
+              for (var i = oppHandRange.min; i < oppHandRange.max; i++) {
+                  while (cardSpots[i].cards.length > 0) {
+                      keyBindings.Y(cardSpots[i].cards[0]);
+                  }
+              }
+          }
+          keyBindings.Y(cardSpots[oppLibraryIndex].cards[0]);
+          oppLibraryList = args.newDeckList;
+          oppLibrarySortedList = args.newDeckOrderedList;
+          placeNextCardFromLibrary(false);
+          addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
+          if (args.numCardsToRedraw >= 0) {
+              drawCardsFromDeck(false, args.numCardsToRedraw);
+          }
+          $('#oppCardSelect').trigger('change');
+      });
+
+  }
 
   class mtgCard {
      // var isTapped, isFaceDown, isYourCard;
@@ -94,6 +151,9 @@
   var cardsInGame = [];
 
   function splitDeckList(deckListText) {
+      if (deckListText === undefined || deckListText === null || deckListText.length <= 0) {
+          return {fullList: [], sortedNumberedList: []};
+      }
       let sortedNumberedList = [], fullList = [], oldNewLine = -1, newNewLine = deckListText.indexOf('\n');
       let line, numCopies, cardName, shouldBreak = false;
       while (!shouldBreak) {
@@ -173,6 +233,10 @@
   };
 
   function addCardToSpot(card, spotIndex) {
+      if (isMultiplayerSession) {
+          socket.emit('broadcastToRoom', roomName, 'moveCardToSpot', {card: card, spotIndex: spotIndex});
+        //   socket.to(roomName).emit('moveCardToSpot', card, spotIndex);
+      }
       var index;
       removeCardFromSpot(card);
       var cardData = mtgCard.mtgCardFromCard(card);
@@ -464,9 +528,11 @@
   }
 
   placeNextCardFromLibrary(true);
-  placeNextCardFromLibrary(false);
   addOrRemoveCardFromSortedList(false, yourLibraryList.pop(), yourLibrarySortedList);
-  addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
+  if (!isMultiplayerSession) {
+      placeNextCardFromLibrary(false);
+      addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
+  }
 
 
   $('.numCounterSelect').each(function(index, obj) {
@@ -491,7 +557,10 @@
 
   $('#oppCardSelect').change(function() {
       $(this.previousSibling).replaceWith($(this).val().toString());
-  }).trigger('change');
+  });
+  if (!isMultiplayerSession) {
+      $('#oppCardSelect').trigger('change');
+  }
 
   $('#yourCardSelect').change(function() {
       $(this.previousSibling).replaceWith($(this).val().toString());
@@ -710,7 +779,7 @@
  $.get('http://localhost:8000/resources/list.txt', function(data) {
      landList = data.split('\n');
      drawCardsFromDeck(7, true);
-     drawCardsFromDeck(7, false);
+     if (!isMultiplayerSession) drawCardsFromDeck(7, false);
  });
 
 
@@ -722,7 +791,12 @@
       cardsInGame.splice(0, cardsInGame.length);
       $('#cardLayer').empty();
       yourLibraryList = shuffle(yourLibraryListHold.slice());
-      oppLibraryList = shuffle(oppLibraryListHold.slice());
+      /*newDeckList, newDeckOrderedList, numCardsToRedraw*/
+      if (isMultiplayerSession) {
+          socket.emit('broadcastToRoom', roomName, 'receiveDeckList', {newDeckList: yourLibraryList, newDeckOrderedList: yourLibrarySortedList , numCardsToRedraw: 7});
+        //   socket.to(roomName).emit('receiveDeckList', yourLibraryList, yourLibrarySortedList, 7);
+      }
+      else oppLibraryList = shuffle(oppLibraryListHold.slice());
       numCards = 0;
       placeNextCardFromLibrary(true);
       placeNextCardFromLibrary(false);
@@ -758,6 +832,10 @@
       if ($.contains($('#oppMenuBar')[0], this))
          isYours = false;
       shuffleDeck(isYours);
+      if (isMultiplayerSession) {
+          socket.emit('broadcastToRoom', roomName, 'receiveDeckList', {newDeckList: yourLibraryList, newDeckOrderedList: yourLibrarySortedList , numCardsToRedraw: -1});
+        //   socket.to(roomName).emit('receiveDeckList', yourLibraryList, yourLibrarySortedList, -1);
+      }
   });
 
   //$(".library").mousedown(libraryMouseDown);
