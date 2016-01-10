@@ -3,7 +3,7 @@
     // $('#playButton').click(function() {
     //     window.location.href = '../../game.html';
     // })
-    var socket = io();
+    var socket = io(), currentRoom;
     var currentUser, currentDecklists = [];
     const valForNewDeck = -1, valForChallengeAFriend = -2;
 
@@ -11,6 +11,47 @@
     $('.deckListEntry').each(function() {
         $(this).height($(this).height() - delta);
     });
+
+    $('#okButton').on('click', function() {
+        topLayerClick({target: $('#topLayer')[0]});
+    });
+
+    socket.on('receiveChallenge', function(challengerUsername) {
+        showPopUpWithIdSelector('#challengePopUp', false);
+        $('#challengeMessage').text(challengerUsername + " is challenging you!");
+        $('#acceptChallengeButton').on('click', function() { //acceptOrDeclineChallenge', function(challengeIniatorUsername, challegeResponderUsername, challengeWasAccepted)
+            socket.emit('acceptOrDeclineChallenge', challengerUsername, currentUser.username, true);
+            $(this).unbind('click');
+            topLayerClick({target: $('#topLayer')[0]});
+        });
+        $('#declineChallengeButton').on('click', function() { //acceptOrDeclineChallenge', function(challengeIniatorUsername, challegeResponderUsername, challengeWasAccepted)
+            socket.emit('acceptOrDeclineChallenge', challengerUsername, currentUser.username, false);
+            $(this).unbind('click');
+        });
+    });
+
+    socket.on('receiveChallengeResponse', function(challengeWasAccepted, challegeResponderUsername, roomName) {
+        if (!challengeWasAccepted) {
+            showPopUpWithIdSelector('#notificationPopUp', true);
+            $('#notificationMessage').text(challegeResponderUsername + " declined your challenge..");
+            $('#loadingSection').css({'display': 'none'});
+        }
+        else {
+            currentRoom = roomName;
+            showPopUpWithIdSelector('#notificationPopUp', true);
+            $('#notificationMessage').text(challegeResponderUsername + " accepted your challenge!");
+            $('#loadingSection').css({'display': 'none'});
+        }
+    });
+
+    function showPopUpWithIdSelector(popIdSelector, outsideClickShouldEscape) { //popIdSelector should include the #, as it is a selector
+        $('#topLayer').css({opacity: 0.0, visibility: "visible"}).animate({opacity: 1.0}, {duration: 100});
+        $('.popUp').css({'display': 'none'});
+        $(popIdSelector).css({'display': 'block'});
+        if (outsideClickShouldEscape) {
+            $('#topLayer').on('click', topLayerClick);
+        }
+    }
 
     $('.deckSelect').change(function() {
         var queryText = '#yourSide ';
@@ -26,7 +67,18 @@
 
         var widthName = nameToPut;
 
+        if ($('#oppDeckListEntry').css('display') == 'none') {
+            $('#oppDeckListEntry').css({'display': 'block'});
+            $('#challengeAFriendSection').css({'display': 'none'});
+            $('#oppSide .deckTitle').prop('readonly', false);
+        }
+
         if ($(this).val() == valForNewDeck) nameToPut = '';
+        else if ($(this).val() == valForChallengeAFriend) {
+            $('#oppSide .deckTitle').prop('readonly', true);
+            $('#oppDeckListEntry').css({'display': 'none'});
+            $('#challengeAFriendSection').css({'display': 'block'});
+        }
 
         $(queryText + '.deckTitle').val(nameToPut);
         $(queryText + '.deckListEntry').val(list);
@@ -61,21 +113,24 @@
 
     $('#signin').click(function() {
         if ($(this).text().indexOf('Sign In') !== -1) {
-            $('#topLayer').css({opacity: 0.0, visibility: "visible"}).animate({opacity: 1.0}, {duration: 100});
+            showPopUpWithIdSelector('#signInPopUp', true);
             $('#usernameInput').focus();
         }
         else
             signOut();
     });
 
-    $('#topLayer').click(function() {
-        $(this).animate({opacity: 0.0}, {duration: 80, complete: function() {
+    function topLayerClick(e) {
+        $(e.target).animate({opacity: 0.0}, {duration: 80, complete: function() {
             $(this).css({opacity: 1.0, visibility: "hidden"});
         }});
         $('.errorText').each(function() {
             $(this).css({opacity: 1.0, visibility: "hidden"});
         });
-    });
+        $(e.target).unbind('click');
+    }
+
+    $('#topLayer').click(topLayerClick);
 
     $('.popUp').click(function(e) {
         e.stopImmediatePropagation();
@@ -90,6 +145,11 @@
     $('#playButton').click(function() {
         sessionStorage.yourListText = $('#yourSide .deckListEntry').val().toLowerCase();
         sessionStorage.oppListText = $('#oppSide .deckListEntry').val().toLowerCase();
+    });
+
+    $('#challengeButton').click(function() {
+        socket.emit('challengeAFriend', currentUser.username, $('#friendUsernameInput').val());
+        $('#loadingSection').css({'display': 'block'});
     });
 
     function signOut() {
@@ -124,7 +184,7 @@
     }
 
     function configureUser(deckLists, user, errMessage) { //deckLists has type [{deckID: _ , deckName: _ , deckList: _ }]
-        if (errMessage === null || errMessage === undefined) {                    //user is {userId: _ , username: _ }
+        if (errMessage === null || errMessage === undefined) {                    //user is {userID: _ , username: _ }
             currentUser = user;
             currentDecklists = deckLists;
             $('#usernameLabel').text(user.username);
@@ -142,8 +202,11 @@
         else if (errMessage === 'Unrecognized username') {
             $('#usernameError').css({opacity: 0.0, visibility: "visible"}).animate({opacity: 1.0}, {duration: 100});
         }
-        else {
+        else if (errMessage === 'Incorrect password'){
             $('#passwordError').css({opacity: 0.0, visibility: "visible"}).animate({opacity: 1.0}, {duration: 100});
+        }
+        else {
+            alert(errMessage.code);
         }
     }
 

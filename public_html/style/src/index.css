@@ -3,41 +3,16 @@ body {
   font-weight: 300;
 }
 
-#background {
-  position: absolute;
-  background-image: url('../../resources/black_linen_v2.png');
-  background-size: 320px 320px;
-  top: 0px;
-  left: 0px;
-  right: 0px;
-  bottom: 0px;
+input:focus::-webkit-input-placeholder {
+  color:transparent;
 }
 
-#topLayer {
-  position: absolute;
-  background-color: rgba(0, 0, 0, 0.5);
-  top: 0px;
-  left: 0px;
-  right: 0px;
-  bottom: 0px;
-  visibility: hidden;
-}
-
-#playButton {
-  font-size: 1.7em;
-}
-
-.deckListEntryWrapper {
-  display: inline-block;
-  width: calc(50% - 2 * 20px);
-  /*margin: 5px;*/
-  padding: 0px 20px 0px 20px;
-}
-
-.deckListEntryOptionsContainer {
-  display: flex;
-  justify-content: space-between;
-  /*align-items: flex-end;*/
+p {
+  text-align: center;
+  color: rgb(254, 255, 252);
+  font-size: 1.6em;
+  line-height: 1.6em;
+  margin-top: 10px;
   margin-bottom: 10px;
 }
 
@@ -55,13 +30,60 @@ select:hover {
   background-color: rgb(210, 212, 206);
 }
 
-p {
-  text-align: center;
-  color: rgb(254, 255, 252);
-  font-size: 1.6em;
-  line-height: 1.6em;
-  margin-top: 10px;
+.deckListEntry {
+  display: block;
+  resize: none;
+  height: 550px;
+  /*width: 96%;*/
+  box-sizing: border-box;
+  width: 100%;
+  border-radius: 6px;
+  border: none;
+  background-color: rgb(254, 255, 252);
+  font: inherit;
+  font-size: 1.2em;
+  padding: 8px;
+  /*margin: auto 10px 16px auto;*/
+  margin: auto;
+}
+
+.deckListEntryOptionsContainer {
+  display: flex;
+  justify-content: space-between;
+  /*align-items: flex-end;*/
   margin-bottom: 10px;
+}
+
+.deckListEntryWrapper {
+  display: inline-block;
+  width: calc(50% - 2 * 20px);
+  /*margin: 5px;*/
+  padding: 0px 20px 0px 20px;
+}
+
+.deckTitle {
+  position: relative;
+  height: 40px;
+  font-size: 1.6em;
+  line-height: 40px;
+  text-align: center;
+  left: 50%;
+  transform: translate(-50%);
+  margin-top: 5px;
+  margin-bottom: 15px;
+  background-color: rgba(144, 144, 144, 0.1);
+}
+
+.errorText {
+  color: red;
+  text-align: right;
+  font-weight: 600;
+  font-size: 1em;
+  margin-left: 22px;
+  margin-top: 8px;
+  display: inline-block;
+  vertical-align: top;
+  visibility: hidden;
 }
 
 .headText {
@@ -74,59 +96,10 @@ p {
 .leftAlign {
   text-align: left;
   margin-bottom: 0px;
-  margin-top: 20px;
-}
-
-.textInput {
-  border-radius: 4px;
-  border: none;
-  outline: none;
-  height: 40px;
-  width: 360px;
-  font: inherit;
-  font-size: 30px;
-  line-height: 40px;
-  padding-left: 8px;
-  display: inline-block;
-}
-
-#title {
-  font-size: 2.4em;
-  font-family: Candara,Calibri,Segoe,Segoe UI,Optima,Arial,sans-serif;
-  font-weight: 550;
-  margin-bottom: 0px;
-  color: rgb(148, 149, 145);
-}
-
-#accountSection {
-  display: inline-block;
-  position: absolute;
-  right: 19px;
-  top: 14px;
-  text-align: left;
-  font-family: 'Gill Sans';
-  font-weight: 400;
-  font-size: 1.4em;
-  color: rgb(111, 122, 157);
-}
-
-#signin {
-  display: inline-block;
-  margin-left: 15px;
-  width: 100px;
-  height: 50px;
-  font-weight: 300;
-  line-height: 50px;
-}
-
-#popUpButtonContainer {
-  display: flex;
-  bottom: 0px;
-  justify-content: space-between;
-  padding-top: 30px;
 }
 
 .mtgButton {
+  display: inline-block;
   border-radius: 4px;
   border: none;
   outline: none;
@@ -137,14 +110,13 @@ p {
   color: rgb(254, 255, 252);
 }
 
-.popUpButton {
-  display: inline-block;
-  width: 220px;
-  height: 70px;
-  line-height: 70px;
-  margin: auto;
-  font-size: 30px;
-  color: rgba(154, 159, 167, 0.9);
+.inputButton {
+  margin: 15px auto;
+  width: 600px;
+  height: 75px;
+  display: block;
+  font-size: 1.3em;
+  line-height: 75px;
 }
 
 .mtgButton:hover {
@@ -166,16 +138,28 @@ p {
   outline: none;
   color: rgb(215, 214, 205);
   padding: 8px 32px 8px 32px;
+  display: none;
 }
 
+.popUpButton {
+  display: inline-block;
+  width: 220px;
+  height: 70px;
+  line-height: 70px;
+  margin: auto;
+  font-size: 30px;
+  color: rgba(154, 159, 167, 0.9);
+}
 
-.inputButton {
-  margin: 15px auto;
-  width: 600px;
-  height: 75px;
-  display: block;
-  font-size: 1.3em;
-  line-height: 75px;
+.popUpButtonContainer {
+  display: flex;
+  bottom: 0px;
+  justify-content: space-between;
+  padding-top: 10px;
+}
+
+.popUpInput {
+  margin-bottom: 20px;
 }
 
 .saveButton {
@@ -186,52 +170,123 @@ p {
   line-height: 1.8em;
 }
 
-.deckListEntry {
-  display: block;
-  height: 550px;
-  /*width: 96%;*/
-  box-sizing: border-box;
-  width: 100%;
-  border-radius: 6px;
+.textInput {
+  border-radius: 4px;
   border: none;
-  background-color: rgb(254, 255, 252);
-  font: inherit;
-  font-size: 1.2em;
-  padding: 8px;
-  /*margin: auto 10px 16px auto;*/
-  margin: auto;
-}
-
-.errorText {
-  color: red;
-  text-align: right;
-  font-weight: 600;
-  font-size: 1em;
-  margin-left: 22px;
-  margin-top: 8px;
-  display: inline-block;
-  vertical-align: top;
-  visibility: hidden;
-}
-
-input:focus::-webkit-input-placeholder {
-  color:transparent;
-}
-
-.deckTitle {
-  position: relative;
+  outline: none;
   height: 40px;
-  font-size: 1.6em;
+  width: 360px;
+  font: inherit;
+  font-size: 30px;
   line-height: 40px;
-  text-align: center;
-  left: 50%;
-  transform: translate(-50%);
-  margin-top: 5px;
-  margin-bottom: 15px;
-  background-color: rgba(144, 144, 144, 0.1);
+  padding-left: 8px;
+  display: inline-block;
+}
+
+#accountSection {
+  display: inline-block;
+  position: absolute;
+  right: 19px;
+  top: 14px;
+  text-align: left;
+  font-family: 'Gill Sans';
+  font-weight: 400;
+  font-size: 1.4em;
+  color: rgb(111, 122, 157);
+}
+
+#background {
+  position: absolute;
+  background-image: url('../../resources/black_linen_v2.png');
+  background-size: 320px 320px;
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+}
+
+#challengeAFriendSection {
+  background-color: rgba(158, 155, 155, 0.19);
+  display: none;
+  width: calc(50% - 2 * 20px);
+  padding: 25px;
+  padding-top: 80px;
+}
+
+#challengeButton {
+  font-size: 1.7em;
+  line-height: 120px;
+  width: 100%;
+  margin-top: 40px;
+  height: 120px;
+}
+
+#challengePopUp {
+  font-size: 30px;
+  height: 190px;
+  padding-bottom: 22px;
+}
+
+#friendUserNameLabel {
+  text-align: left;
+  display: inline-block;
+  margin-right: 25px;
 }
 
 #hiddenSelect {
   visibility: hidden;
   position: absolute;
+}
+
+#loadingIcon {
+  display: block;
+  height: 60px;
+  width: 60px;
+  background-size: 60px 60px;
+  margin: 35px auto 10px auto;
+}
+
+#loadingSection {
+  display: none;
+}
+
+#notificationPopUp {
+  height: 160px;
+}
+
+#okButton {
+  width: 60%;
+  height: 75px;
+  line-height: 75px;
+}
+
+#playButton {
+  font-size: 1.7em;
+}
+
+#signin {
+  display: inline-block;
+  margin-left: 15px;
+  width: 100px;
+  height: 50px;
+  font-weight: 300;
+  line-height: 50px;
+}
+
+#title {
+  font-size: 2.4em;
+  font-family: Candara,Calibri,Segoe,Segoe UI,Optima,Arial,sans-serif;
+  font-weight: 550;
+  margin-bottom: 0px;
+  color: rgb(148, 149, 145);
+}
+
+#topLayer {
+  position: absolute;
+  background-color: rgba(0, 0, 0, 0.5);
+  top: 0px;
+  left: 0px;
+  right: 0px;
+  bottom: 0px;
+  visibility: hidden;
 }

@@ -33,7 +33,21 @@
                     </select><button
                         class="mtgButton saveButton">Save</button>
                 </div>
-                <textarea class='deckListEntry'></textarea>
+                <textarea class='deckListEntry' id='oppDeckListEntry'></textarea>
+                <div id='challengeAFriendSection' class='deckListEntry' style='position: absolute'>
+                    <div>
+                        <p id='friendUserNameLabel'>Friend's username: </p><input type='text' class='textInput' id='friendUsernameInput'>
+                    </div>
+                    <div class='mtgButton' id='challengeButton'>
+                        Challenge!
+                    </div>
+                    <div id='loadingSection'>
+                        <img id='loadingIcon' src='../../resources/loading_apple.gif'>
+                        <p>
+                            Waiting for a response..
+                        </p>
+                    </div>
+                </div>
             </div>
             <a href='game.html' class='mtgButton inputButton' id='playButton'>Play</a>
         </div>
@@ -43,23 +57,44 @@
                 <p class="leftAlign">
                     Username
                 </p>
-                <input type='text' class="textInput" id='usernameInput'>
+                <input type='text' class="textInput popUpInput" id='usernameInput'>
                 <p class='errorText' id='usernameError'>
                     Unknown username
                 </p>
                 <p class="leftAlign">
                     Password
                 </p>
-                <input type='password' class="textInput" id='passwordInput'>
+                <input type='password' class="textInput popUpInput" id='passwordInput'>
                 <p class='errorText' id='passwordError'>
                     Incorrect password
                 </p>
-                <div id="popUpButtonContainer">
+                <div class="popUpButtonContainer">
                     <div class='mtgButton popUpButton' id="signInFromPopUp">
                         Sign In
                     </div><div class='mtgButton popUpButton' id="signUpFromPopUp">
                         Sign Up
                     </div>
+                </div>
+            </div>
+            <div class='popUp' id='challengePopUp'>
+                <p id='challengeMessage'>
+
+                </p>
+                <div class='popUpButtonContainer'>
+                    <div class='mtgButton popUpButton' id='acceptChallengeButton'>
+                        Accept
+                    </div>
+                    <div class='mtgButton popUpButton' id='declineChallengeButton'>
+                        Decline
+                    </div>
+                </div>
+            </div>
+            <div class='popUp' id='notificationPopUp'>
+                <p id='notificationMessage'>
+
+                </p>
+                <div class='mtgButton inputButton' id='okButton'>
+                    OK
                 </div>
             </div>
         </div>

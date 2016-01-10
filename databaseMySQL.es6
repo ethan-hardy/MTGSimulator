@@ -15,7 +15,7 @@ function makeConnection(cb) {
     });
 }
 
-var deckListsForUser = function(username, password, cb) {
+var deckListsForUser = function(username, password, cb) { //cb should have the form fn(deckLists, user, errMessage)
     makeConnection(function(con) {
         con.query("SELECT * FROM userTable WHERE username=?", [username], function(err,data) {
             if (data.length === 0) cb(null, null, "Unrecognized username");
@@ -29,7 +29,7 @@ var deckListsForUser = function(username, password, cb) {
     });
 };
 
-var saveDeckListForUser = function(name, deckList, user, cb) {
+var saveDeckListForUser = function(name, deckList, user, cb) { //cb should have the form fn(deckLists, user, errMessage)
     makeConnection(function(con) {
         let queryString = "INSERT INTO deckTable (userID, deckName, deckList) VALUES (?, ?, ?)";
         con.query(queryString, [user.userID, name, deckList], function(err,res){
