@@ -11,7 +11,8 @@ CREATE TABLE userTable
 CREATE TABLE deckTable
 (
   deckID INT UNSIGNED NOT NULL auto_increment primary key,
-  userID INT,
+  userID INT UNSIGNED NOT NULL,
+  FOREIGN KEY (userID) REFERENCES userTable(userID),
   deckName VARCHAR(40),
   decklist TEXT
 );

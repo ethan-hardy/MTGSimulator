@@ -183,6 +183,24 @@ select:hover {
   display: inline-block;
 }
 
+.deleteButton {
+  width: 70px;
+  height: 1.8em;
+  display: none;
+  font-size: 1.2em;
+  line-height: 1.8em;
+  margin-right: 12px;
+  background-color: rgb(159, 14, 10);
+}
+
+.deleteButton:hover {
+  background-color: rgb(128, 15, 13);
+}
+
+.deleteButton:active {
+  background-color: rgb(93, 17, 15);
+}
+
 #accountSection {
   display: inline-block;
   position: absolute;

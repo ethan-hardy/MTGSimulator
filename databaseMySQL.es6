@@ -10,8 +10,7 @@ function makeConnection(cb) {
         database: "mtgDB"
     });
     con.connect(function(err) {
-        //lol fuck errors
-        cb(con); //TODO make it end the connection after
+        cb(con); //TODO add error handling
     });
 }
 
@@ -23,6 +22,7 @@ var deckListsForUser = function(username, password, cb) { //cb should have the f
             else {
                 con.query("SELECT deckID, deckName, deckList FROM deckTable WHERE userID='"+data[0].userID+"'",function(err2,data2) {
                     cb(data2, data[0], null);
+                    con.end();
                 });
             }
         });
@@ -37,6 +37,7 @@ var saveDeckListForUser = function(name, deckList, user, cb) { //cb should have 
             else {
                 console.log("Error caused by query:\n" + queryString + " , " + user.userID + " , " + name + " , " + deckList);
                 cb(err);
+                con.end();
             }
         });
     });
@@ -50,6 +51,21 @@ var updateDeckList = function(deckID, name, deckList, cb) {
             else {
                 console.log("Error caused by query:\n" + queryString + " , " + name + " , " + deckList + " , " + deckID);
                 cb(err);
+                con.end();
+            }
+        });
+    });
+};
+
+var deleteDeckList = function(deckID, cb) {
+    makeConnection(function(con) {
+        let queryString = "DELETE FROM deckTable WHERE deckID=?";
+        con.query(queryString, [deckID], function(err,res){
+            if (err === null) cb({code: "Deleted", id: res.insertId});
+            else {
+                console.log("Error caused by query:\n" + queryString + " , " + deckID);
+                cb(err);
+                con.end();
             }
         });
     });
@@ -63,10 +79,11 @@ var signUpWithInfo = function(username, password, cb) {
             else {
                 console.log("Error caused by query:\n" + queryString + " , " + username + " , " + password);
                 cb(null, null, err);
+                con.end();
             }
         });
     });
 };
 
 
-module.exports = {deckListsForUser: deckListsForUser, saveDeckListForUser: saveDeckListForUser, updateDeckList: updateDeckList, signUpWithInfo: signUpWithInfo};
+module.exports = {deleteDeckList: deleteDeckList, deckListsForUser: deckListsForUser, saveDeckListForUser: saveDeckListForUser, updateDeckList: updateDeckList, signUpWithInfo: signUpWithInfo};

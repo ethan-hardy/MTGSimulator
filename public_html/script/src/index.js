@@ -3,7 +3,7 @@
     // $('#playButton').click(function() {
     //     window.location.href = '../../game.html';
     // })
-    var socket = io(), currentRoom;
+    var socket = io();
     var currentUser, currentDecklists = [];
     const valForNewDeck = -1, valForChallengeAFriend = -2;
 
@@ -23,10 +23,9 @@
             socket.emit('acceptOrDeclineChallenge', challengerUsername, currentUser.username, true);
             $(this).unbind('click');
             topLayerClick({target: $('#topLayer')[0]});
-            sessionStorage.yourUsernameStore = currentUser.username;
-            console.log(challengerUsername);
+            sessionStorage.yourUsername = currentUser.username;
             sessionStorage.opponentUsername = challengerUsername;
-            sessionStorage.isHost = "false";
+            sessionStorage.isTheHost = "false";
             // sessionStorage[currentUser.username] = JSON.stringify({isHost: "false", opponentUsername: challengerUsername});
             $('#playButton')[0].click();
         });
@@ -36,25 +35,25 @@
         });
     });
 
-    socket.on('receiveChallengeResponse', function(challengeWasAccepted, challegeResponderUsername, roomName) {
+    socket.on('receiveChallengeResponse', function(challengeWasAccepted, challegeResponderUsername) {
         if (!challengeWasAccepted) {
             showPopUpWithIdSelector('#notificationPopUp', true);
             $('#notificationMessage').text(challegeResponderUsername + " declined your challenge..");
             $('#loadingSection').css({'display': 'none'});
         }
         else {
-            currentRoom = roomName;
             showPopUpWithIdSelector('#notificationPopUp', true);
             $('#notificationMessage').text(challegeResponderUsername + " accepted your challenge!");
             $('#loadingSection').css({'display': 'none'});
-            
-            sessionStorage.yourUsernameStore = currentUser.username;
+
+
             sessionStorage.opponentUsername = challegeResponderUsername;
-            sessionStorage.isHost = "true";
+            sessionStorage.yourUsername = currentUser.username;
+            sessionStorage.isTheHost = "true";
 
             // sessionStorage[currentUser.username] = JSON.stringify({isHost: "true", opponentUsername: challegeResponderUsername});
 
-            window.setTimeout(() => $('#playButton')[0].click(), 1000);
+            $('#playButton')[0].click();
         }
     });
 
@@ -69,7 +68,14 @@
 
     $('.deckSelect').change(function() {
         var queryText = '#yourSide ';
-        if ($.contains($('#oppSide')[0], this)) queryText = '#oppSide ';
+        if ($.contains($('#oppSide')[0], this)) {
+            queryText = '#oppSide ';
+            if ($('#oppDeckListEntry').css('display') == 'none') {
+                $('#oppDeckListEntry').css({'display': 'block'});
+                $('#challengeAFriendSection').css({'display': 'none'});
+                $('#oppSide .deckTitle').prop('readonly', false);
+            }
+        }
         var list, nameToPut = $(this).find(':selected').text();
 
         for (var deck of currentDecklists) {
@@ -81,17 +87,17 @@
 
         var widthName = nameToPut;
 
-        if ($('#oppDeckListEntry').css('display') == 'none') {
-            $('#oppDeckListEntry').css({'display': 'block'});
-            $('#challengeAFriendSection').css({'display': 'none'});
-            $('#oppSide .deckTitle').prop('readonly', false);
+        if ($(this).val() < 0) {
+            if ($(this).val() == valForNewDeck) nameToPut = '';
+            else if ($(this).val() == valForChallengeAFriend) {
+                $('#oppSide .deckTitle').prop('readonly', true);
+                $('#oppDeckListEntry').css({'display': 'none'});
+                $('#challengeAFriendSection').css({'display': 'block'});
+            }
+            $(queryText + '.deleteButton').css({'display': 'none'});
         }
-
-        if ($(this).val() == valForNewDeck) nameToPut = '';
-        else if ($(this).val() == valForChallengeAFriend) {
-            $('#oppSide .deckTitle').prop('readonly', true);
-            $('#oppDeckListEntry').css({'display': 'none'});
-            $('#challengeAFriendSection').css({'display': 'block'});
+        else {
+            $(queryText + '.deleteButton').css({'display': 'inline-block'});
         }
 
         $(queryText + '.deckTitle').val(nameToPut);
@@ -162,8 +168,14 @@
     });
 
     $('#challengeButton').click(function() {
-        socket.emit('challengeAFriend', currentUser.username, $('#friendUsernameInput').val());
-        $('#loadingSection').css({'display': 'block'});
+        socket.emit('challengeAFriend', currentUser.username, $('#friendUsernameInput').val(), function(err) {
+            if (err !== undefined) {
+                alert(err);
+            }
+            else {
+                $('#loadingSection').css({'display': 'block'});
+            }
+        });
     });
 
     function signOut() {
@@ -212,11 +224,15 @@
                     }));
                 }
             });
+            $('#usernameInput').val('');
+            $('#passwordInput').val('');
         }
         else if (errMessage === 'Unrecognized username') {
+            $('#usernameInput').val('');
             $('#usernameError').css({opacity: 0.0, visibility: "visible"}).animate({opacity: 1.0}, {duration: 100});
         }
         else if (errMessage === 'Incorrect password'){
+            $('#passwordInput').val('');
             $('#passwordError').css({opacity: 0.0, visibility: "visible"}).animate({opacity: 1.0}, {duration: 100});
         }
         else {
@@ -226,8 +242,6 @@
 
     $('#signInFromPopUp').click(function() {
         socket.emit('signInWithInfo', $('#usernameInput').val(), $('#passwordInput').val(), configureUser);
-        $('#usernameInput').val('');
-        $('#passwordInput').val('');
         $('.errorText').each(function() {
             $(this).css({opacity: 1.0, visibility: "hidden"});
         });
@@ -242,7 +256,7 @@
         });
     });
 
-    $('#passwordInput').keyup(function(e) {
+    $('.popUpInput').keyup(function(e) {
         if (e.keyCode == 13) {
             $('#signInFromPopUp').trigger('click');
         }
@@ -285,6 +299,33 @@
                         }
                     });
                 }
+            });
+        }
+    });
+    $('.deleteButton').click(function() {
+        if (currentUser !== null && currentUser !== undefined) {
+            var queryText = '#oppSide ';
+            if ($.contains($('#yourSide')[0], this)) queryText = '#yourSide ';
+            var deckID = $(queryText + '.deckSelect').val();
+            if (deckID < 0) return;
+            socket.emit('deleteDeck', deckID, function(response) {
+                alert(response.code);
+                if (response.code !== 'Deleted') return;
+                let optionToRemove;
+                $('#yourSide .deckSelect').children().each(function() {
+                    if ($(this).val() == deckID) {
+                        optionToRemove = this;
+                    }
+                });
+                $(optionToRemove).remove();
+                $('#oppSide .deckSelect').children().each(function() {
+                    if ($(this).val() == deckID) {
+                        optionToRemove = this;
+                    }
+                });
+                $(optionToRemove).remove();
+                //$('.deckListEntry').val('');
+                $('.deckSelect').trigger('change');
             });
         }
     });

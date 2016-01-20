@@ -1,66 +1,148 @@
 "use strict";
-(function() {
+
+var scriptGen = script();
+
+function* script() {
   $("#battlefield").height(window.innerHeight - $(".playerSection").outerHeight(true) * 2 - 16 - $('.menuBar').height() * 2);
   $('#yourMenuBar').offset({top: $('#cardLayer').height() + $('.menuBar').height() + 8});
   var cardImageLinkBase = "http://gatherer.wizards.com/Handlers/Image.ashx?type=card&name=";
   var socket, roomName, opponentUsername, yourUsername;
   var landList;
   var isMultiplayerSession = false;
+  var globalShouldBroadcast = true;
+  var taskQueue = []; // form is {task: _ , order: _ }
+  var currentTaskNumber = 0; //this is the current number we're on for performing sent tasks
+                            //eg; if this is 4, we have performed tasks 0,1,2,3 and are waiting to receive task
+                            //task 4 before we perform any more. Should be incremented when we perform one in performNextTask()
+  var currentSentTaskNumber = 0; //this is similar, but it's the current number we're on for sending tasks to be
+                                //performed by the other player. Should be incremented when we send a task
 
-  if (sessionStorage.isHost !== undefined) {
-      yourUsername = sessionStorage.yourUsernameStore;
-      let objs = JSON.parse(sessionStorage[yourUsername]);
-      opponentUsername = objs.opponentUsername;
-      console.log(opponentUsername);
+  function performNextTask() {
+      let performedTaskIndex = -1;
+      for (var i = 0; i < taskQueue.length; i++) {
+          if (taskQueue[i].order === currentTaskNumber) {
+              currentTaskNumber++;
+              taskQueue[i].task();
+              performedTaskIndex = i;
+              break;
+          }
+      }
+      if (performedTaskIndex >= 0) {
+          taskQueue.splice(performedTaskIndex, 1);
+      }
+      else {
+          setTimeout(performNextTask, 500);
+      }
+  }
+
+  function addTask(order, task) {
+      taskQueue.push({task: task, order: order});
+      performNextTask();
+  }
+
+  if (sessionStorage.isTheHost !== undefined) {
+      yourUsername = sessionStorage.yourUsername;
+      opponentUsername = sessionStorage.opponentUsername;
       isMultiplayerSession = true;
-      if (objs.isHost === "true") {
+      if (sessionStorage.isTheHost === "true") {
           roomName = yourUsername + "'s and " + opponentUsername + "'s match room";
       }
       else {
           roomName = opponentUsername + "'s and " + yourUsername + "'s match room";
       }
       socket = io();
-      socket.emit('joinRoom', roomName);
 
-      socket.on('moveCardToSpot', function(args/*{card, spotIndex}*/) {
+      socket.on('moveCardToSpot', function(args/*{cardID, spotIndex}*/) {
           //this shouldn't be called with a card that doesn't exist on the receiving end
           //the spotIndex passed is the SENDER's spot; this function then converts it
-          if (args.spotIndex < battlefieldRange.min || args.spotIndex > battlefieldRange.max) { //not on the battlefield
-              let battlefieldSize = (battlefieldRange.max - battlefieldRange.min + 1);
-              let row = battlefieldSize / (args.spotIndex - battlefieldRange.min), rowSize = battlefieldSize / 4;
-              let destinationRow = 3 - row;
-              let column = rowSize % (args.spotIndex - battlefieldRange.min);
-              args.spotIndex = destinationRow * rowSize + column + battlefieldRange.min;
-          }
-          else if (args.spotIndex > cardSpots.length / 2) {
-              args.spotIndex = oppExileIndex - (cardSpots.length - args.spotIndex - 1);
-          }
-          else {
-              args.spotIndex = cardSpots.length - (oppExileIndex - args.spotIndex - 1);
-          }
-          addCardToSpot(args.card, args.spotIndex);
-      });
-
-      socket.on('receiveDeckList', function(args/*newDeckList, newDeckOrderedList, numCardsToRedraw*/) { //numCardsToRedraw = -1 for no change
-          if (args.numCardsToRedraw >= 0) {  //the new decklists must be passed BEFORE drawing the cards
-              for (var i = oppHandRange.min; i < oppHandRange.max; i++) {
-                  while (cardSpots[i].cards.length > 0) {
-                      keyBindings.Y(cardSpots[i].cards[0]);
+          console.log("moveCardToSpot was called");
+          addTask(args.taskNumber, function() {
+              if (args.spotIndex >= battlefieldRange.min && args.spotIndex <= battlefieldRange.max+1) { //on the battlefield
+                  if ((args.spotIndex - battlefieldRange.min+1) % 2 === 0) { //the card was in the top half of the opponent's screen
+                      args.spotIndex++;
                   }
+                  else { //the card was in the bottom half of the opponent's screen
+                      args.spotIndex--;
+                  }
+                 // args.spotIndex = destinationRow * rowSize + column + battlefieldRange.min;
               }
-          }
-          keyBindings.Y(cardSpots[oppLibraryIndex].cards[0]);
-          oppLibraryList = args.newDeckList;
-          oppLibrarySortedList = args.newDeckOrderedList;
-          placeNextCardFromLibrary(false);
-          addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
-          if (args.numCardsToRedraw >= 0) {
-              drawCardsFromDeck(false, args.numCardsToRedraw);
-          }
-          $('#oppCardSelect').trigger('change');
+              else if (args.spotIndex > cardSpots.length / 2) {
+                  args.spotIndex = oppExileIndex - (cardSpots.length - args.spotIndex - 1);
+              }
+              else {
+                  args.spotIndex = yourHandRange.min + args.spotIndex;
+              }
+              addCardToSpot($('#' + args.cardID)[0], args.spotIndex, false);
+          });
       });
 
+      socket.on('drawCardsFromBothDecks', function(args) {
+          addTask(args.taskNumber, function() {
+              drawCardsFromDeck(7, true);
+              drawCardsFromDeck(7, false);
+          });
+      });
+
+      socket.on('passSecondDeckListToGuest', function(args) {
+          addTask(args.taskNumber, function() {
+              socket.emit('broadcastToRoom', roomName, 'receiveDeckList',
+                {newDeckList: oppLibraryList, newDeckOrderedList: oppLibrarySortedList, isYours: true, cbString: 'drawCardsFromBothDecks', taskNumber: currentSentTaskNumber++});
+              placeNextCardFromLibrary(true);
+              placeNextCardFromLibrary(false);
+          });
+      });
+
+      socket.on('receiveDeckList', function(args/*newDeckList, newDeckOrderedList, isYours*/) {
+          addTask(args.taskNumber, function() {
+              if (args.shouldNotPlaceDeck) {
+                  oppLibraryList = args.newDeckList;
+                  oppLibrarySortedList = args.newDeckOrderedList;
+                  socket.emit('broadcastToRoom', roomName, 'receiveDeckList',
+                    {newDeckList: yourLibraryList, newDeckOrderedList: yourLibrarySortedList, isYours: false, cbString: 'passSecondDeckListToGuest', taskNumber: currentSentTaskNumber++});
+                   //      addOrRemoveCardFromSortedList(false, yourLibraryList.pop(), yourLibrarySortedList);
+                   //      addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
+                  return;
+              }
+              if (args.cbString !== undefined) {
+                  socket.emit('broadcastToRoom', roomName, args.cbString, {taskNumber: currentSentTaskNumber++});
+              }
+              if (args.isYours) {
+                  yourLibraryList = args.newDeckList;
+                  yourLibrarySortedList = args.newDeckOrderedList;
+                  if (cardSpots[yourLibraryIndex].cards.length > 0) {
+                      mtgCard.mtgCardFromCard(cardSpots[yourLibraryIndex].cards[0]).setName(yourLibraryList[0]);
+                  }
+                  else {
+                      placeNextCardFromLibrary(true);
+                  }
+                //  $('#yourCardSelect').trigger('change');
+              }
+              else {
+                  oppLibraryList = args.newDeckList;
+                  oppLibrarySortedList = args.newDeckOrderedList;
+                  if (cardSpots[oppLibraryIndex].cards.length > 0) {
+                      mtgCard.mtgCardFromCard(cardSpots[oppLibraryIndex].cards[0]).setName(oppLibraryList[0]);
+                  }
+                  else {
+                      placeNextCardFromLibrary(false);
+                  }
+                //  $('#oppCardSelect').trigger('change');
+            }
+          });
+      });
+
+      socket.on('performKeyBinding', function(args) {
+          keyBindings[args.keyChar]($('#' + args.cardID));
+      });
+
+      socket.on('resumeActivities', function() {
+         scriptGen.next();
+      });
+
+      socket.emit('joinRoom', roomName);
   }
+
+  yield;
 
   class mtgCard {
      // var isTapped, isFaceDown, isYourCard;
@@ -198,10 +280,12 @@
       if (isYourDeck) {
           yourLibraryList = shuffle(yourLibraryList);
           cardsInGame[$(cardSpots[yourLibraryIndex].cards[0]).attr('id')].setName(yourLibraryList[0]);
+          socket.emit('broadcastToRoom', roomName, 'receiveDeckList', {newDeckList: yourLibraryList, newDeckOrderedList: yourLibrarySortedList, isYours: !isYourDeck, taskNumber: currentSentTaskNumber++});
       }
       else {
           oppLibraryList = shuffle(oppLibraryList);
           cardsInGame[$(cardSpots[oppLibraryIndex].cards[0]).attr('id')].setName(oppLibraryList[0]);
+          socket.emit('broadcastToRoom', roomName, 'receiveDeckList', {newDeckList: oppLibraryList, newDeckOrderedList: oppLibrarySortedList, isYours: !isYourDeck, taskNumber: currentSentTaskNumber++});
       }
   }
 
@@ -232,10 +316,9 @@
       }
   };
 
-  function addCardToSpot(card, spotIndex) {
-      if (isMultiplayerSession) {
-          socket.emit('broadcastToRoom', roomName, 'moveCardToSpot', {card: card, spotIndex: spotIndex});
-        //   socket.to(roomName).emit('moveCardToSpot', card, spotIndex);
+  function addCardToSpot(card, spotIndex, shouldBroadcastChanges) {
+      if (isMultiplayerSession && shouldBroadcastChanges === undefined && globalShouldBroadcast === true) {
+          socket.emit('broadcastToRoom', roomName, 'moveCardToSpot', {cardID: $(card).attr('id'), spotIndex: spotIndex, taskNumber: currentSentTaskNumber++});
       }
       var index;
       removeCardFromSpot(card);
@@ -377,8 +460,10 @@
           if (removedSpot.zone.indexOf('Library') >= 0) {
               xOff = 0;
               yOff = 0;
-              (mtgCard.mtgCardFromCard(card).isYourCard) ? addOrRemoveCardFromSortedList(false, yourLibraryList.pop(), yourLibrarySortedList) : addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
-              placeNextCardFromLibrary(mtgCard.mtgCardFromCard(card).isYourCard);
+            //  (mtgCard.mtgCardFromCard(card).isYourCard) ? addOrRemoveCardFromSortedList(false, yourLibraryList.pop(), yourLibrarySortedList) : addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
+            //  let libIndex = (mtgCard.mtgCardFromCard(card).isYourCard) ? yourLibraryIndex : oppLibraryIndex;
+            //  if (cardSpots[libIndex].cards.length <= 1)
+                placeNextCardFromLibrary(mtgCard.mtgCardFromCard(card).isYourCard);
           }
           else if (removedSpot.zone.indexOf('Graveyard') >= 0 || removedSpot.zone.indexOf('Exile') >= 0) {
               xOff = 0;
@@ -403,6 +488,12 @@
   }
 
   function placeNextCardFromLibrary(isYourLibrary) {
+      if (isYourLibrary === true) {
+          addOrRemoveCardFromSortedList(false, yourLibraryList.pop(), yourLibrarySortedList);
+      }
+      else {
+          addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
+      }
       if (isYourLibrary && yourLibraryList.length === 0 || !isYourLibrary && oppLibraryList.length === 0) return;
       var spot = (isYourLibrary) ? cardSpots[yourLibraryIndex] : cardSpots[oppLibraryIndex];
       var cardToPlace = $("<div>")
@@ -467,7 +558,7 @@
       }
       for (var x = initialX; x + initialX + cardSize.width <= wid; x += (cardSpacing.x + cardSize.width)) {
           if (initialY == 12.5) {
-              var y = initialY;
+              let y = initialY;
               cardSpots.push({x: x + $(zone).offset().left, y: y + $(zone).offset().top - $('.menuBar').height(), cards: [], zone: $(zone).attr('id')});
               switch ($(zone).attr('id')) {
                   case 'oppHand':
@@ -505,14 +596,16 @@
           else {
               if (battlefieldRange.min === -1)
                   battlefieldRange = {min: cardSpots.length-1, max: cardSpots.length-2};
-              for (var y = initialY; y + initialY / 2 + cardSize.height <= hgt / 2; y += (cardSpacing.y + cardSize.height)) {
+              for (let y = initialY; y + initialY / 2 + cardSize.height <= hgt / 2; y += (cardSpacing.y + cardSize.height)) {
                   battlefieldRange.max += 2;
                   cardSpots.push({x: x + $(zone).offset().left, y: y + $(zone).offset().top - 8 - $('.menuBar').height(), cards: [], zone: $(zone).attr('id')});
                   cardSpots.push({x: x + $(zone).offset().left, y: hgt - y - cardSize.height + $(zone).offset().top - 8 - $('.menuBar').height(), cards: [], zone: $(zone).attr('id')});
               }
           }
       }
-  })
+    //  battlefieldRange.min++;
+    //  battlefieldRange.max++;
+  });
 
   $('.menuBarSelect').hover(function(e) {
           $(e.target).addClass('hovered');
@@ -527,11 +620,15 @@
       $('#yourCardSelect').append("<option>" + card.cardName + "</option>");
   }
 
-  placeNextCardFromLibrary(true);
-  addOrRemoveCardFromSortedList(false, yourLibraryList.pop(), yourLibrarySortedList);
   if (!isMultiplayerSession) {
+      placeNextCardFromLibrary(true);
+    //  addOrRemoveCardFromSortedList(false, yourLibraryList.pop(), yourLibrarySortedList);
       placeNextCardFromLibrary(false);
-      addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
+    //  addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
+  }
+  else if (sessionStorage.isTheHost === 'false') {
+      console.log(socket);
+      socket.emit('broadcastToRoom', roomName, 'receiveDeckList', {newDeckList: yourLibraryList, newDeckOrderedList: yourLibrarySortedList, shouldNotPlaceDeck: true, taskNumber: currentSentTaskNumber++});
   }
 
 
@@ -665,7 +762,7 @@
              else yCoord = 2 * cardSpacing.y + cardSize.height + $('#battlefield').offset().top - 8;
          }
          var minX = 300000, currentSpotIndex;
-         for (var i = battlefieldRange.min; i <= battlefieldRange.max; i++) {
+         for (var i = battlefieldRange.min; i <= battlefieldRange.max+1; i++) {
              if (cardSpots[i].y === yCoord - $('.menuBar').height() && cardSpots[i].cards.length === 0 && cardSpots[i].x <= minX) {
                  minX = cardSpots[i].x;
                  currentSpotIndex = i;
@@ -675,7 +772,7 @@
              addCardToSpot(card, currentSpotIndex);
          }
      },
-     A: function(card) {
+     A: function(card) { //hand
          let cardData = mtgCard.mtgCardFromCard(card);
          if (cardData.isZoomed) return;
          var destinationRange = oppHandRange;
@@ -691,17 +788,17 @@
          }
          addCardToSpot(card, destinationIndex);
      },
-     E: function(card) {
+     E: function(card) { //add counter
          var cardData = mtgCard.mtgCardFromCard(card);
          if (cardData.zone === 'battlefield' && !cardData.isZoomed)
            cardData.setNumCounters(cardData.getNumCounters() + 1);
      },
-     W: function(card) {
+     W: function(card) { //remove counter
          var cardData = mtgCard.mtgCardFromCard(card);
          if (cardData.zone === 'battlefield' && !cardData.isZoomed)
            cardData.setNumCounters(cardData.getNumCounters() - 1);
      },
-     space: function(card) {
+     space: function(card) { //zoom
          if (cardIsCurrentlyZooming) {
              console.log("zooming");
              return;
@@ -778,8 +875,10 @@
 
  $.get('http://localhost:8000/resources/list.txt', function(data) {
      landList = data.split('\n');
-     drawCardsFromDeck(7, true);
-     if (!isMultiplayerSession) drawCardsFromDeck(7, false);
+     if (!isMultiplayerSession) {
+        drawCardsFromDeck(7, true);
+        drawCardsFromDeck(7, false);
+     }
  });
 
 
@@ -791,17 +890,17 @@
       cardsInGame.splice(0, cardsInGame.length);
       $('#cardLayer').empty();
       yourLibraryList = shuffle(yourLibraryListHold.slice());
-      /*newDeckList, newDeckOrderedList, numCardsToRedraw*/
-      if (isMultiplayerSession) {
-          socket.emit('broadcastToRoom', roomName, 'receiveDeckList', {newDeckList: yourLibraryList, newDeckOrderedList: yourLibrarySortedList , numCardsToRedraw: 7});
-        //   socket.to(roomName).emit('receiveDeckList', yourLibraryList, yourLibrarySortedList, 7);
-      }
-      else oppLibraryList = shuffle(oppLibraryListHold.slice());
+      oppLibraryList = shuffle(oppLibraryListHold.slice());
+      /*newDeckList, newDeckOrderedList, isYours*/
       numCards = 0;
       placeNextCardFromLibrary(true);
       placeNextCardFromLibrary(false);
-      addOrRemoveCardFromSortedList(false, yourLibraryList.pop(), yourLibrarySortedList);
-      addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
+    //  addOrRemoveCardFromSortedList(false, yourLibraryList.pop(), yourLibrarySortedList);
+    //  addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
+      if (isMultiplayerSession) {
+          socket.emit('broadcastToRoom', roomName, 'receiveDeckList', {newDeckList: yourLibraryList, newDeckOrderedList: yourLibrarySortedList , isYours: false, taskNumber: currentSentTaskNumber++});
+          socket.emit('broadcastToRoom', roomName, 'receiveDeckList', {newDeckList: yourLibraryList, newDeckOrderedList: yourLibrarySortedList , isYours: true, taskNumber: currentSentTaskNumber++});
+      }
       drawCardsFromDeck(7, true);
       drawCardsFromDeck(7, false);
       $('.menuBarSelect').each(function(index, obj) {
@@ -833,8 +932,7 @@
          isYours = false;
       shuffleDeck(isYours);
       if (isMultiplayerSession) {
-          socket.emit('broadcastToRoom', roomName, 'receiveDeckList', {newDeckList: yourLibraryList, newDeckOrderedList: yourLibrarySortedList , numCardsToRedraw: -1});
-        //   socket.to(roomName).emit('receiveDeckList', yourLibraryList, yourLibrarySortedList, -1);
+          socket.emit('broadcastToRoom', roomName, 'receiveDeckList', {newDeckList: yourLibraryList, newDeckOrderedList: yourLibrarySortedList , numCardsToRedraw: -1, taskNumber: currentSentTaskNumber++});
       }
   });
 
@@ -878,12 +976,12 @@
           if ($(lastPosition.card).hasClass('library')) {
               var curCard = cardsInGame[$(lastPosition.card).removeClass('library').attr('id')];
               curCard.flip();
-              if (curCard.isYourCard === true) {
-                  addOrRemoveCardFromSortedList(false, yourLibraryList.pop(), yourLibrarySortedList);
-              }
-              else {
-                  addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
-              }
+            //   if (curCard.isYourCard === true) {
+            //       addOrRemoveCardFromSortedList(false, yourLibraryList.pop(), yourLibrarySortedList);
+            //   }
+            //   else {
+            //       addOrRemoveCardFromSortedList(false, oppLibraryList.pop(), oppLibrarySortedList);
+            //   }
           }
 
           addCardToSpot(lastPosition.card, cardSpots.indexOf(currentSpot));
@@ -914,9 +1012,9 @@
           });
           lastPosition.x = e.clientX;
           lastPosition.y = e.clientY;
-          if (mouseHasMoved === false && $(lastPosition.card).hasClass('library')) {
-              placeNextCardFromLibrary(cardData.isYourCard);
-          }
+        //   if (mouseHasMoved === false && $(lastPosition.card).hasClass('library')) {
+        //       placeNextCardFromLibrary(cardData.isYourCard);
+        //   }
       }
       mouseHasMoved = true;
   });
@@ -927,8 +1025,11 @@
      if (hoverCard.hasClass('card')) {
         if (c == " ")
             keyBindings.space(hoverCard[0]);
-        else
+        else {
             keyBindings[c](hoverCard[0]);
+            if (c == 'T' || c == 'E' || c == 'W')
+                socket.emit('broadcastToRoom', roomName, 'performKeyBinding', {keyChar: c, cardID: $(hoverCard).attr('id')});
+        }
      }
      else if (hoverCard.hasClass('menuBarSelect')) {
          let curList = yourLibraryList, curIndex = yourLibraryIndex;
@@ -944,5 +1045,6 @@
          keyBindings[c](curCard);
      }
   });
+}
 
-})();
+scriptGen.next();
