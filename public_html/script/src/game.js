@@ -52,11 +52,36 @@ function* script() {
       }
       socket = io();
 
+      socket.on('setValueOfSelector', function(args/*selector, index, val, triggerFunc*/) {
+          globalShouldBroadcast = false;
+          let jQ = $(args.selector).find('*').get(args.index);
+          $(jQ).val(args.val);
+          if (args.triggerFunc !== undefined) {
+              $(jQ).trigger(args.triggerFunc);
+          }
+          globalShouldBroadcast = true;
+      });
+
+      socket.on('moveCardFromLibraryToTop', function(args/*cardName, isYourLibrary*/) {
+          addTask(args.taskNumber, function() {
+              let curList = yourLibraryList, curIndex = yourLibraryIndex;
+              if (!args.isYourLibrary) {
+                  curList = oppLibraryList;
+                  curIndex = oppLibraryIndex;
+              }
+              let curName = args.cardName;
+              curList.splice(curList.indexOf(curName), 1);
+              curList.push(curName);
+              let curCard = cardSpots[curIndex].cards[0];
+              mtgCard.mtgCardFromCard(curCard).setName(curName);
+          });
+      });
+
       socket.on('moveCardToSpot', function(args/*{cardID, spotIndex}*/) {
           //this shouldn't be called with a card that doesn't exist on the receiving end
           //the spotIndex passed is the SENDER's spot; this function then converts it
-          console.log("moveCardToSpot was called");
           addTask(args.taskNumber, function() {
+              console.log(cardsInGame[args.cardID].getName());
               if (args.spotIndex >= battlefieldRange.min && args.spotIndex <= battlefieldRange.max+1) { //on the battlefield
                   if ((args.spotIndex - battlefieldRange.min+1) % 2 === 0) { //the card was in the top half of the opponent's screen
                       args.spotIndex++;
@@ -132,7 +157,12 @@ function* script() {
       });
 
       socket.on('performKeyBinding', function(args) {
-          keyBindings[args.keyChar]($('#' + args.cardID));
+          globalShouldBroadcast = false;
+          if (args.keyChar == 'U') {
+              removeCardFromSpot($('#' + args.cardID)[0]);
+          }
+          keyBindings[args.keyChar]($('#' + args.cardID)[0]);
+          globalShouldBroadcast = true;
       });
 
       socket.on('resumeActivities', function() {
@@ -157,6 +187,7 @@ function* script() {
           this.isLand = undefined;
           this.isZoomed = false;
           this.zoomedOutOffset = null;
+          this.shouldFlip = true; //whether moving this card to the battlefield should flip it up
           var _numCounters = 0;
 
           this.setNumCounters = function(num) {
@@ -208,6 +239,7 @@ function* script() {
           if (this.isLand === undefined) {
               this.setIsLand();
           }
+          this.shouldFlip = true;
       }
 
       static mtgCardFromCard(card) {
@@ -324,7 +356,7 @@ function* script() {
       removeCardFromSpot(card);
       var cardData = mtgCard.mtgCardFromCard(card);
       cardData.zone = cardSpots[spotIndex].zone;
-      if (cardData.isFaceDown) cardData.flip();
+      if (cardData.isFaceDown && !(cardSpots[spotIndex].zone === 'battlefield' && !cardData.shouldFlip)) cardData.flip();
       if ($(card).hasClass('library')) $(card).removeClass('library');
       var xOff = cardOffset.x, yOff = cardOffset.y;
       var completionHandler;
@@ -341,6 +373,7 @@ function* script() {
               var cardToRemove = cardSpots[spotIndex].cards.pop();
               cardSpots[spotIndex].cards.push(card);
               index = $(cardToRemove).attr('id');
+              $(cardToRemove).attr('id', -1);
               completionHandler = function() {
                   $(cardToRemove).remove();
               };
@@ -640,6 +673,16 @@ function* script() {
       else  $(obj).val('20').prop('selected', true);
   }).change(function() {
       $(this.previousSibling).replaceWith(this.previousSibling.data.split(' ')[0] + ' ' + $(this).val().toString());
+      if (globalShouldBroadcast && isMultiplayerSession) {
+          let pref = '#yourMenuBar', other = '#oppMenuBar';
+          if ($.contains($('#yourMenuBar')[0], this)) {
+              pref = '#oppMenuBar';
+              other = '#yourMenuBar';
+          }
+          let ind = $(other).find('*').index(this);
+        //   let sel = " .numCounterSelect[value^='" + $(this.previousSibling).text().substr(0, 4) + "']",;
+          socket.emit('broadcastToRoom', roomName, 'setValueOfSelector', {selector: pref, index: ind, val: $(this).val(), triggerFunc: 'change'});
+      }
   });
 
   $('.drawNumberSelect').each(function(index, obj) {
@@ -668,9 +711,15 @@ function* script() {
       let isYourDeck = $.contains($('#yourMenuBar')[0], this);
       let indexRange = (isYourDeck) ? yourHandRange : oppHandRange;
       //shouldAnimate = false;
+      let cardsToRemove = [];
       for (var i = indexRange.min; i <= indexRange.max; i++) {
-          for (let card of cardSpots[i].cards)
-              keyBindings.Y(card);
+          for (let card of cardSpots[i].cards) {
+              cardsToRemove.push(card);
+          }
+      }
+      for (let card of cardsToRemove) {
+          console.log(mtgCard.mtgCardFromCard(card).getName());
+          keyBindings.Y(card);
       }
       shouldAnimate = true;
       if (isYourDeck)
@@ -678,8 +727,27 @@ function* script() {
       else
           $('#oppMenuBar .shuffleButton').trigger('click');
       setTimeout(function() {
-          drawCardsFromDeck(numCardsToDraw, isYourDeck);
+         drawCardsFromDeck(numCardsToDraw, isYourDeck);
       }, 300);
+  });
+
+  $('.untapButton').on('click', function() {
+      let isYourDeck = $.contains($('#yourMenuBar')[0], this);
+      for (let cardData of cardsInGame) {
+          if (cardData.isYourCard === isYourDeck && cardData.isTapped) {
+              keyBindings.T(cardData.card);
+          }
+      }
+  });
+
+  $('.nextTurnButton').on('click', function() {
+      let isYourDeck = $.contains($('#yourMenuBar')[0], this);
+      let queryString = '#yourMenuBar ';
+      if (!isYourDeck) {
+          queryString = '#oppMenuBar ';
+      }
+      $(queryString + '.untapButton').trigger('click');
+      drawCardsFromDeck(1, isYourDeck);
   });
 
   var shouldAnimate = true;
@@ -699,6 +767,9 @@ function* script() {
                  'transform': 'rotate(90deg)'
              });
              cardData.isTapped = true;
+         }
+         if (isMultiplayerSession && globalShouldBroadcast) {
+             socket.emit('broadcastToRoom', roomName, 'performKeyBinding', {keyChar: 'T', cardID: $(card).attr('id')});
          }
      },
      G: function(card) { //graveyard
@@ -739,6 +810,9 @@ function* script() {
          }
          cardsInGame.pop();
          numCards--;
+         if (isMultiplayerSession && globalShouldBroadcast) {
+             socket.emit('broadcastToRoom', roomName, 'performKeyBinding', {keyChar: 'U', cardID: $(card).attr('id')});
+         }
      },
      X: function(card) { //exile
          let cardData = mtgCard.mtgCardFromCard(card);
@@ -790,17 +864,47 @@ function* script() {
      },
      E: function(card) { //add counter
          var cardData = mtgCard.mtgCardFromCard(card);
-         if (cardData.zone === 'battlefield' && !cardData.isZoomed)
-           cardData.setNumCounters(cardData.getNumCounters() + 1);
+         if (cardData.zone === 'battlefield' && !cardData.isZoomed) {
+            cardData.setNumCounters(cardData.getNumCounters() + 1);
+         }
+         if (isMultiplayerSession && globalShouldBroadcast) {
+            socket.emit('broadcastToRoom', roomName, 'performKeyBinding', {keyChar: 'E', cardID: $(card).attr('id')});
+         }
      },
      W: function(card) { //remove counter
          var cardData = mtgCard.mtgCardFromCard(card);
-         if (cardData.zone === 'battlefield' && !cardData.isZoomed)
-           cardData.setNumCounters(cardData.getNumCounters() - 1);
+         if (cardData.zone === 'battlefield' && !cardData.isZoomed) {
+             cardData.setNumCounters(cardData.getNumCounters() - 1);
+         }
+         if (isMultiplayerSession && globalShouldBroadcast) {
+            socket.emit('broadcastToRoom', roomName, 'performKeyBinding', {keyChar: 'W', cardID: $(card).attr('id')});
+         }
+     },
+     F: function(card) { //flip
+         var cardData = mtgCard.mtgCardFromCard(card);
+         if (cardData.zone === 'battlefield' && !cardData.isZoomed) {
+             cardData.flip();
+             if (isMultiplayerSession && globalShouldBroadcast) {
+                socket.emit('broadcastToRoom', roomName, 'performKeyBinding', {keyChar: 'F', cardID: $(card).attr('id')});
+             }
+         }
+         else if (cardData.zone.indexOf('Hand') !== -1 && !cardData.isZoomed) {
+             let waitTime = 0;
+             if (!cardData.isFaceDown) {
+                 cardData.flip();
+                 if (isMultiplayerSession && globalShouldBroadcast) {
+                    socket.emit('broadcastToRoom', roomName, 'performKeyBinding', {keyChar: 'F', cardID: $(card).attr('id')});
+                 }
+                 waitTime = 100;
+             }
+             cardData.shouldFlip = false;
+             setTimeout(function() {
+                 keyBindings.B(card);
+             }, waitTime);
+         }
      },
      space: function(card) { //zoom
          if (cardIsCurrentlyZooming) {
-             console.log("zooming");
              return;
          }
          let cardData = mtgCard.mtgCardFromCard(card);
@@ -931,9 +1035,6 @@ function* script() {
       if ($.contains($('#oppMenuBar')[0], this))
          isYours = false;
       shuffleDeck(isYours);
-      if (isMultiplayerSession) {
-          socket.emit('broadcastToRoom', roomName, 'receiveDeckList', {newDeckList: yourLibraryList, newDeckOrderedList: yourLibrarySortedList , numCardsToRedraw: -1, taskNumber: currentSentTaskNumber++});
-      }
   });
 
   //$(".library").mousedown(libraryMouseDown);
@@ -975,7 +1076,7 @@ function* script() {
 
           if ($(lastPosition.card).hasClass('library')) {
               var curCard = cardsInGame[$(lastPosition.card).removeClass('library').attr('id')];
-              curCard.flip();
+              //curCard.flip();
             //   if (curCard.isYourCard === true) {
             //       addOrRemoveCardFromSortedList(false, yourLibraryList.pop(), yourLibrarySortedList);
             //   }
@@ -1027,8 +1128,8 @@ function* script() {
             keyBindings.space(hoverCard[0]);
         else {
             keyBindings[c](hoverCard[0]);
-            if (c == 'T' || c == 'E' || c == 'W')
-                socket.emit('broadcastToRoom', roomName, 'performKeyBinding', {keyChar: c, cardID: $(hoverCard).attr('id')});
+            //if (c == 'T' || c == 'E' || c == 'W' || c == 'U')
+            //    socket.emit('broadcastToRoom', roomName, 'performKeyBinding', {keyChar: c, cardID: $(hoverCard).attr('id')});
         }
      }
      else if (hoverCard.hasClass('menuBarSelect')) {
@@ -1038,6 +1139,7 @@ function* script() {
              curIndex = oppLibraryIndex;
          }
          let curName = regExEncodeString(hoverCard[0].previousSibling.nodeValue);
+         socket.emit('broadcastToRoom', roomName, 'moveCardFromLibraryToTop', {cardName: curName, isYourLibrary: (hoverCard.attr('id') === 'oppCardSelect'), taskNumber: currentSentTaskNumber++});
          curList.splice(curList.indexOf(curName), 1);
          curList.push(curName);
          let curCard = cardSpots[curIndex].cards[0];
